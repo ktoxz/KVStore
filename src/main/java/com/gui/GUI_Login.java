@@ -1,126 +1,78 @@
-// java
 package com.gui;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
-/*
- Updated GUI_Login as a JPanel to be compatible with Main which does:
- frame.setContentPane(new GUI_Login());
-*/
 public class GUI_Login extends JPanel {
 
-    private final JTextField usernameField;
-    private final JPasswordField passwordField;
-    private final JButton btnLogin;
-    private final JButton btnCancel;
+    private JTextField txtUsername;
+    private JPasswordField txtPassword;
+    private JButton btnLogin;
+    private JLabel lblForgot;
 
     public GUI_Login() {
-        super(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setLayout(new BorderLayout());
 
-        // Form panel
-        JPanel form = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
-        gbc.anchor = GridBagConstraints.WEST;
+        // ===== LEFT PANEL (Image) =====
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setBackground(new Color(245, 248, 255)); // nhẹ, không trắng gắt
+        leftPanel.setPreferredSize(new Dimension(520, 600));
 
-        // Username
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        form.add(new JLabel("Username:"), gbc);
+        ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
+        Image scaled = icon.getImage().getScaledInstance(420, 420, Image.SCALE_SMOOTH);
+        JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+        imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imgLabel.setBorder(new EmptyBorder(40, 0, 40, 0));
+        leftPanel.add(imgLabel);
 
-        gbc.gridx = 1;
-        usernameField = new JTextField(16);
-        form.add(usernameField, gbc);
+        // ===== RIGHT PANEL (Login Form) =====
+        JPanel rightPanel = new JPanel(new GridBagLayout());
+        rightPanel.setBackground(Color.WHITE);
+        rightPanel.setBorder(new EmptyBorder(40, 50, 40, 50));
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.anchor = GridBagConstraints.WEST;
+        gc.insets = new Insets(10, 0, 10, 0);
 
-        // Password
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        form.add(new JLabel("Password:"), gbc);
+        JLabel lblTitle = new JLabel("Đăng nhập");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 28));
 
-        gbc.gridx = 1;
-        passwordField = new JPasswordField(16);
-        form.add(passwordField, gbc);
+        JLabel lblUser = new JLabel("Username");
+        txtUsername = new JTextField(22);
 
-        // Buttons
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnLogin = new JButton("Login");
-        btnCancel = new JButton("Cancel");
-        buttons.add(btnCancel);
-        buttons.add(btnLogin);
+        JLabel lblPass = new JLabel("Password");
+        txtPassword = new JPasswordField(22);
 
-        add(form, BorderLayout.CENTER);
-        add(buttons, BorderLayout.SOUTH);
+        btnLogin = new JButton("Đăng nhập");
+        btnLogin.setBackground(new Color(0, 122, 255));
+        btnLogin.setForeground(Color.WHITE);
+        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnLogin.setFocusPainted(false);
+        btnLogin.setPreferredSize(new Dimension(140, 38));
+        btnLogin.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Actions
-        btnLogin.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onLogin();
-            }
-        });
+        lblForgot = new JLabel("<html><u>Quên mật khẩu?</u></html>");
+        lblForgot.setForeground(new Color(0, 122, 255));
+        lblForgot.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        btnCancel.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onCancel();
-            }
-        });
+        // Layout the components
+        gc.gridy = 0; rightPanel.add(lblTitle, gc);
+        gc.gridy++; rightPanel.add(lblUser, gc);
+        gc.gridy++; rightPanel.add(txtUsername, gc);
+        gc.gridy++; rightPanel.add(lblPass, gc);
+        gc.gridy++; rightPanel.add(txtPassword, gc);
+        gc.gridy++;
 
-        // Ensure default button is set after this panel is added to a root pane
-        SwingUtilities.invokeLater(() -> {
-            JRootPane rp = SwingUtilities.getRootPane(GUI_Login.this);
-            if (rp != null) {
-                rp.setDefaultButton(btnLogin);
-            }
-        });
-    }
+        JPanel rowButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        rowButtons.setBackground(Color.WHITE);
+        rowButtons.add(btnLogin);
+        rowButtons.add(Box.createHorizontalStrut(15));
+        rowButtons.add(lblForgot);
 
-    private void onLogin() {
-        String username = usernameField.getText().trim();
-        char[] password = passwordField.getPassword();
+        rightPanel.add(rowButtons, gc);
 
-        if (username.isEmpty() || password.length == 0) {
-            JOptionPane.showMessageDialog(this, "Please enter username and password.", "Validation", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        boolean authOk = "admin".equals(username) && java.util.Arrays.equals(password, "admin".toCharArray());
-
-        // Clear password array for security
-        java.util.Arrays.fill(password, '\0');
-
-        if (authOk) {
-            JOptionPane.showMessageDialog(this, "Login successful.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            openMainWindow(username);
-            // Close the top-level window that contains this panel (the frame created in Main)
-            Window w = SwingUtilities.getWindowAncestor(this);
-            if (w != null) {
-                w.dispose();
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid username or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-            passwordField.setText("");
-        }
-    }
-
-    private void onCancel() {
-        Window w = SwingUtilities.getWindowAncestor(this);
-        if (w != null) {
-            w.dispose();
-        }
-    }
-
-    private void openMainWindow(String username) {
-        JFrame main = new JFrame("KVStore - Main");
-        main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        main.setSize(480, 320);
-        main.setLocationRelativeTo(null);
-        JLabel welcome = new JLabel("Welcome, " + username + "!", SwingConstants.CENTER);
-        main.add(welcome);
-        main.setVisible(true);
+        add(leftPanel, BorderLayout.WEST);
+        add(rightPanel, BorderLayout.EAST);
     }
 }

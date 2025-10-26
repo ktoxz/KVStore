@@ -1,6 +1,7 @@
 package com;
 
 import com.connectDB.ConnectDB;
+import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.gui.GUI_Login;
 
 import javax.swing.*;
@@ -29,16 +30,22 @@ public class Main {
         }));
 
 
+        try {
+            UIManager.setLookAndFeel(new FlatMacLightLaf());
+        } catch (Exception ignored) {
+        }
+
+
+
         // Launch GUI on Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("KVStore - Đăng nhập");
             frame.setContentPane(new GUI_Login());
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1080, 600);
+            frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setResizable(false);
-
-
             frame.setVisible(true);
         });
     }
