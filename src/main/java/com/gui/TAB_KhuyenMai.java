@@ -20,7 +20,7 @@ import javax.swing.JTextField;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 
-public class TAB_KhuyenMa extends JFrame {
+public class TAB_KhuyenMai extends JFrame {
 
     private JTextField textMaKhuyenMai;
     private JComboBox<String> cmbLoaiCT;
@@ -43,7 +43,7 @@ public class TAB_KhuyenMa extends JFrame {
 	private JButton btnLuudulieuCT;
 
 
-    public TAB_KhuyenMa() {
+    public TAB_KhuyenMai() {
         setTitle("Quản Lý Khuyến Mãi - Cửa Hàng Tiện Lợi");
         setSize(1200, 700);
         setLocationRelativeTo(null);
@@ -249,6 +249,6 @@ public class TAB_KhuyenMa extends JFrame {
     }
 
     public static void main(String[] args) {
-        new TAB_KhuyenMa().setVisible(true);
+        new TAB_KhuyenMai().setVisible(true);
     }
 }
