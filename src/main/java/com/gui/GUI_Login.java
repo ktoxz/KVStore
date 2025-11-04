@@ -5,6 +5,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class GUI_Login extends JPanel {
+    private JFrame parentFrame;
 
     private JTextField txtUsername;
     private JPasswordField txtPassword;
@@ -52,16 +53,26 @@ public class GUI_Login extends JPanel {
         btnLogin.setPreferredSize(new Dimension(140, 38));
         btnLogin.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
+
+
         lblForgot = new JLabel("<html><u>Quên mật khẩu?</u></html>");
         lblForgot.setForeground(new Color(0, 122, 255));
         lblForgot.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
+        // Thêm sự kiện Enter cho password field
+        txtPassword.addActionListener(e -> btnLogin.doClick());
+
         // Layout the components
-        gc.gridy = 0; rightPanel.add(lblTitle, gc);
-        gc.gridy++; rightPanel.add(lblUser, gc);
-        gc.gridy++; rightPanel.add(txtUsername, gc);
-        gc.gridy++; rightPanel.add(lblPass, gc);
-        gc.gridy++; rightPanel.add(txtPassword, gc);
+        gc.gridy = 0;
+        rightPanel.add(lblTitle, gc);
+        gc.gridy++;
+        rightPanel.add(lblUser, gc);
+        gc.gridy++;
+        rightPanel.add(txtUsername, gc);
+        gc.gridy++;
+        rightPanel.add(lblPass, gc);
+        gc.gridy++;
+        rightPanel.add(txtPassword, gc);
         gc.gridy++;
 
         JPanel rowButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -74,5 +85,75 @@ public class GUI_Login extends JPanel {
 
         add(leftPanel, BorderLayout.WEST);
         add(rightPanel, BorderLayout.EAST);
+
+        // Thêm ActionListener cho nút đăng nhập
+        btnLogin.addActionListener(e -> handleLogin());
+
     }
+
+    /**
+     * Phương thức để set JFrame cha - cần gọi từ Main
+     */
+    public void setParentFrame(JFrame frame) {
+        this.parentFrame = frame;
+    }
+
+    /**
+     * Phương thức xử lý đăng nhập - hiển thị thông báo và mở GUI_General
+     */
+    private void handleLogin() {
+
+        String username = txtUsername.getText().trim();
+        String password = new String(txtPassword.getPassword());
+
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng nhập đầy đủ thông tin đăng nhập!",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Hiển thị thông báo đăng nhập thành công
+        JOptionPane.showMessageDialog(this,
+                "Đăng nhập thành công!\nChào mừng " + username,
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        // Đóng cửa sổ login và mở GUI_General
+        openMainWindow();
+    }
+
+    /**
+     * Mở cửa sổ chính GUI_General và đóng cửa sổ login
+     */
+    private void openMainWindow() {
+        // Tìm JFrame cha nếu chưa được set
+        if (parentFrame == null) {
+            Window window = SwingUtilities.getWindowAncestor(this);
+            if (window instanceof JFrame) {
+                parentFrame = (JFrame) window;
+            }
+        }
+
+        // Tạo và hiển thị GUI_General
+        SwingUtilities.invokeLater(() -> {
+            JFrame mainFrame = new JFrame("KVStore - Quản lý cửa hàng");
+            mainFrame.setContentPane(new GUI_General());
+            mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            mainFrame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Toàn màn hình
+            mainFrame.setResizable(false); // Không resize được
+            mainFrame.setVisible(true);
+
+            // Đóng cửa sổ login
+            if (parentFrame != null) {
+                parentFrame.dispose();
+            }
+        });
+    }
+
+    /**
+     * Login
+     */
+
 }

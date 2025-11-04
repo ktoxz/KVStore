@@ -29,18 +29,18 @@ public class Main {
             }
         }));
 
-
+        // Set Look and Feel
         try {
             UIManager.setLookAndFeel(new FlatMacLightLaf());
         } catch (Exception ignored) {
         }
 
-
-
         // Launch GUI on Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("KVStore - Đăng nhập");
-            frame.setContentPane(new GUI_Login());
+            GUI_Login loginPanel = new GUI_Login();
+            loginPanel.setParentFrame(frame);
+            frame.setContentPane(loginPanel);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1080, 600);
             frame.pack();
