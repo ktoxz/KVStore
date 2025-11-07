@@ -3,6 +3,10 @@ package com.gui;
 import javax.swing.*;
 import java.awt.*;
 
+/*
+    * @author Thanh Khôi
+ */
+
 public class TAB_BanHang extends JPanel {
 
     public TAB_BanHang() {

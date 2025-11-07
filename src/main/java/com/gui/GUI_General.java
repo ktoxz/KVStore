@@ -114,9 +114,12 @@ public class GUI_General extends JPanel {
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Bạn có thể thêm các tab khác tại đây
-        // JButton btnNewTab = createTabButton("Tên Tab", "Icon");
-        // btnNewTab.addActionListener(e -> showTab(new YourTabPanel()));
-        // sidebarPanel.add(btnNewTab);
+        // Tab Hướng dẫn
+        JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
+        btnHuongDan.addActionListener(e -> showTab(new TAB_NhanVien()));
+        sidebarPanel.add(btnNhanVien);
+
+        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         sidebarPanel.add(Box.createVerticalGlue());
     }
