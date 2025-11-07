@@ -1,68 +1,93 @@
 package com.entity;
 
 public class SanPham {
-	private String ma, ten, moTa, hinhAnh;
-	private boolean hoatDong;
-	private double gia;
+	private String maSP;
+	private String tenSP;
+	private double giaSP;
+	private String moTaSP;
+	private String hinhAnhSP;
+	private boolean tinhTrangSP;
+	private String loaiSP;
 
-	public SanPham(String ma, String ten, String moTa, boolean hoatDong) {
-		this(ma, ten, moTa, hoatDong, null, 0.0);
+	// --- Constructor đầy đủ ---
+	public SanPham(String maSP, String tenSP, double giaSP, String moTaSP, String hinhAnhSP, boolean tinhTrangSP, String loaiSP) {
+		this.maSP = maSP;
+		this.tenSP = tenSP;
+		this.giaSP = giaSP;
+		this.moTaSP = moTaSP;
+		this.hinhAnhSP = hinhAnhSP;
+		this.tinhTrangSP = tinhTrangSP;
+		this.loaiSP = loaiSP;
 	}
 
-	public SanPham(String ma, String ten, String moTa, boolean hoatDong, String hinhAnh) {
-		this(ma, ten, moTa, hoatDong, hinhAnh, 0.0);
+	// --- Constructor rút gọn ---
+	public SanPham(String maSP, String tenSP, double giaSP) {
+		this(maSP, tenSP, giaSP, "", "", true, "");
 	}
 
-	public SanPham(String ma, String ten, String moTa, boolean hoatDong, String hinhAnh, double gia) {
-		this.ma = ma;
-		this.ten = ten;
-		this.moTa = moTa;
-		this.hoatDong = hoatDong;
-		this.hinhAnh = hinhAnh;
-		this.gia = gia;
+	public SanPham(String maSP, String tenSP, double giaSP, boolean tinhTrangSP) {
+		this(maSP, tenSP, giaSP, "", "", tinhTrangSP, "");
 	}
 
-	public String getMa() {
-		return ma;
+	// --- Getter / Setter ---
+	public String getMaSP() {
+		return maSP;
 	}
 
-	public String getTen() {
-		return ten;
+	public void setMaSP(String maSP) {
+		this.maSP = maSP;
 	}
 
-	public String getMoTa() {
-		return moTa;
+	public String getTenSP() {
+		return tenSP;
 	}
 
-	public boolean isHoatDong() {
-		return hoatDong;
+	public void setTenSP(String tenSP) {
+		this.tenSP = tenSP;
 	}
 
-	public String getHinhAnh() {
-		return hinhAnh;
+	public double getGiaSP() {
+		return giaSP;
 	}
 
-	public double getGia() {
-		return gia;
+	public void setGiaSP(double giaSP) {
+		this.giaSP = giaSP;
 	}
 
-	public void setTen(String v) {
-		ten = v;
+	public String getMoTaSP() {
+		return moTaSP;
 	}
 
-	public void setMoTa(String v) {
-		moTa = v;
+	public void setMoTaSP(String moTaSP) {
+		this.moTaSP = moTaSP;
 	}
 
-	public void setHoatDong(boolean v) {
-		hoatDong = v;
+	public String getHinhAnhSP() {
+		return hinhAnhSP;
 	}
 
-	public void setHinhAnh(String v) {
-		hinhAnh = v;
+	public void setHinhAnhSP(String hinhAnhSP) {
+		this.hinhAnhSP = hinhAnhSP;
 	}
 
-	public void setGia(double v) {
-		gia = v;
+	public boolean isTinhTrangSP() {
+		return tinhTrangSP;
+	}
+
+	public void setTinhTrangSP(boolean tinhTrangSP) {
+		this.tinhTrangSP = tinhTrangSP;
+	}
+
+	public String getLoaiSP() {
+		return loaiSP;
+	}
+
+	public void setLoaiSP(String loaiSP) {
+		this.loaiSP = loaiSP;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("%s - %s - %.0fđ (%s)", maSP, tenSP, giaSP, loaiSP);
 	}
 }

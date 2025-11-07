@@ -1,11 +1,15 @@
 package com;
 
 import com.connectDB.ConnectDB;
+import com.dao.DAO_SanPham;
+import com.entity.SanPham;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.gui.GUI_Login;
 
 import javax.swing.*;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
@@ -33,6 +37,12 @@ public class Main {
         try {
             UIManager.setLookAndFeel(new FlatMacLightLaf());
         } catch (Exception ignored) {
+        }
+
+        DAO_SanPham daoSanPham = new DAO_SanPham();
+        List<SanPham> sps = daoSanPham.getAllSanPham();
+        for(SanPham sp: sps) {
+            System.out.println(sp);
         }
 
         // Launch GUI on Event Dispatch Thread

@@ -49,11 +49,11 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 
 		public synchronized void save(SanPham sp) {
-			db.put(sp.getMa(), sp);
+			db.put(sp.getMaSP(), sp);
 		}
 
 		public synchronized void update(SanPham sp) {
-			db.put(sp.getMa(), sp);
+			db.put(sp.getMaSP(), sp);
 		}
 
 		public synchronized void deleteById(String ma) {
@@ -72,9 +72,11 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String k = kw == null ? "" : kw.trim().toLowerCase();
 			if (k.isEmpty())
 				return findAll();
-			return db
-					.values().stream().filter(sp -> sp.getMa().toLowerCase().contains(k)
-							|| sp.getTen().toLowerCase().contains(k) || sp.getMoTa().toLowerCase().contains(k))
+			return db.values().stream()
+					.filter(sp -> sp.getMaSP().toLowerCase().contains(k)
+							|| sp.getTenSP().toLowerCase().contains(k)
+							|| sp.getMoTaSP().toLowerCase().contains(k)
+							|| sp.getLoaiSP().toLowerCase().contains(k))
 					.collect(Collectors.toList());
 		}
 	}
@@ -91,7 +93,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			CLR_TEXT_DARK = Color.BLACK;
 
 	// UI
-	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh;
+	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh, txtLoai;
 	JTextArea txtMoTa;
 	JCheckBox chkActive;
 	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh;
@@ -136,9 +138,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 		if (initialData != null) {
 			for (SanPham sp : initialData) {
-				String ma = (sp.getMa() == null || sp.getMa().isEmpty()) ? this.repo.nextId() : sp.getMa();
-				this.repo
-						.save(new SanPham(ma, sp.getTen(), sp.getMoTa(), sp.isHoatDong(), sp.getHinhAnh(), sp.getGia()));
+				String ma = (sp.getMaSP() == null || sp.getMaSP().isEmpty()) ? this.repo.nextId() : sp.getMaSP();
+				this.repo.save(new SanPham(ma, sp.getTenSP(), sp.getGiaSP(), sp.getMoTaSP(), sp.getHinhAnhSP(), sp.isTinhTrangSP(), sp.getLoaiSP()));
 			}
 		}
 		
@@ -179,7 +180,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 
 	private JComponent buildCenterTable() {
-		String[] cols = { "Ảnh", "Mã", "Tên loại", "Mô tả", "Giá", "Hoạt động" };
+		String[] cols = { "Ảnh", "Mã", "Tên sản phẩm", "Mô tả", "Giá", "Loại", "Hoạt động" };
 		mdl = new DefaultTableModel(cols, 0) {
 			public boolean isCellEditable(int r, int c) {
 				return false;
@@ -188,7 +189,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			public Class<?> getColumnClass(int c) {
 				if (c == 0)
 					return ImageIcon.class; // Ảnh
-				if (c == 5)
+				if (c == 6)
 					return Boolean.class; // Hoạt động
 				return String.class; // các cột còn lại
 			}
@@ -226,13 +227,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		txtMa.setEditable(false);
 		addRowFixed(p, gbc, "Mã:", txtMa);
 
-		// --- Tên loại
+		// --- Tên sản phẩm
 		txtTen = new JTextField();
-		addRowFixed(p, gbc, "Tên loại:", txtTen);
+		addRowFixed(p, gbc, "Tên sản phẩm:", txtTen);
 
 		// --- Giá
 		txtGia = new JTextField();
 		addRowFixed(p, gbc, "Giá (₫):", txtGia);
+
+		// --- Loại
+		txtLoai = new JTextField();
+		addRowFixed(p, gbc, "Loại SP:", txtLoai);
 
 		// --- Mô tả
 		txtMoTa = new JTextArea(6, 20);
@@ -415,9 +420,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private void fillTable(List<SanPham> data) {
 		mdl.setRowCount(0);
 		for (SanPham sp : data) {
-			ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnh(), THUMB_W, THUMB_H);
-			String giaStr = formatGia(sp.getGia());
-			mdl.addRow(new Object[] { icon, sp.getMa(), sp.getTen(), sp.getMoTa(), giaStr, sp.isHoatDong() });
+			ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
+			String giaStr = formatGia(sp.getGiaSP());
+			mdl.addRow(new Object[] { icon, sp.getMaSP(), sp.getTenSP(), sp.getMoTaSP(), giaStr, sp.getLoaiSP(), sp.isTinhTrangSP() });
 		}
 	}
 
@@ -436,6 +441,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		txtMa.setText("");
 		txtTen.setText("");
 		txtGia.setText("");
+		txtLoai.setText("");
 		txtMoTa.setText("");
 		chkActive.setSelected(true);
 		txtPathAnh.setText("");
@@ -445,13 +451,14 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 
 	private void fillForm(SanPham sp) {
-		txtMa.setText(sp.getMa());
-		txtTen.setText(sp.getTen());
-		txtGia.setText(formatGia(sp.getGia()));
-		txtMoTa.setText(sp.getMoTa());
-		chkActive.setSelected(sp.isHoatDong());
-		txtPathAnh.setText(sp.getHinhAnh() == null ? "" : sp.getHinhAnh());
-		lblPreview.setIcon(scaledOrPlaceholder(sp.getHinhAnh(), PREVIEW_W, PREVIEW_H));
+		txtMa.setText(sp.getMaSP());
+		txtTen.setText(sp.getTenSP());
+		txtGia.setText(formatGia(sp.getGiaSP()));
+		txtLoai.setText(sp.getLoaiSP());
+		txtMoTa.setText(sp.getMoTaSP());
+		chkActive.setSelected(sp.isTinhTrangSP());
+		txtPathAnh.setText(sp.getHinhAnhSP() == null ? "" : sp.getHinhAnhSP());
+		lblPreview.setIcon(scaledOrPlaceholder(sp.getHinhAnhSP(), PREVIEW_W, PREVIEW_H));
 	}
 
 	private void selectRowById(String id) {
@@ -475,7 +482,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		if (o.equals(btnThem)) { 
 			String ten = txtTen.getText().trim();
 			if (ten.isEmpty()) {
-				JOptionPane.showMessageDialog(this, "Tên loại không được rỗng!");
+				JOptionPane.showMessageDialog(this, "Tên sản phẩm không được rỗng!");
 				txtTen.requestFocus();
 				return;
 			}
@@ -487,11 +494,12 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			}
 			String ma = repo.nextId();
 			String moTa = txtMoTa.getText().trim();
+			String loai = txtLoai.getText().trim();
 			boolean active = chkActive.isSelected();
 			String path = txtPathAnh.getText().trim();
 			if (path.isEmpty())
 				path = null;
-			repo.save(new SanPham(ma, ten, moTa, active, path, gia));
+			repo.save(new SanPham(ma, ten, gia, moTa, path, active, loai));
 			reloadTable();
 			selectRowById(ma);
 			return;
@@ -501,7 +509,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String ma = txtMa.getText().trim();
 			String ten = txtTen.getText().trim();
 			if (ten.isEmpty()) {
-				JOptionPane.showMessageDialog(this, "Tên loại không được rỗng!");
+				JOptionPane.showMessageDialog(this, "Tên sản phẩm không được rỗng!");
 				txtTen.requestFocus();
 				return;
 			}
@@ -512,15 +520,16 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 				return;
 			}
 			String moTa = txtMoTa.getText().trim();
+			String loai = txtLoai.getText().trim();
 			boolean active = chkActive.isSelected();
 			String path = txtPathAnh.getText().trim();
 			if (path.isEmpty())
 				path = null;
 			if (ma.isEmpty()) {
 				ma = repo.nextId();
-				repo.save(new SanPham(ma, ten, moTa, active, path, gia));
+				repo.save(new SanPham(ma, ten, gia, moTa, path, active, loai));
 			} else
-				repo.update(new SanPham(ma, ten, moTa, active, path, gia));
+				repo.update(new SanPham(ma, ten, gia, moTa, path, active, loai));
 			reloadTable();
 			selectRowById(ma);
 			return;
