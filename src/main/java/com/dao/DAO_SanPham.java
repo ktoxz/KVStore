@@ -14,8 +14,13 @@ public class DAO_SanPham {
     public List<SanPham> getAllSanPham() {
         List<SanPham> ds = new ArrayList<>();
         String sql = "SELECT * FROM SanPham";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql);
+        Connection con = ConnectDB.getCon(); // ❌ không dùng try-with-resource ở đây
+        if (con == null) {
+            System.err.println("Kết nối DB chưa được thiết lập!");
+            return ds;
+        }
+
+        try (PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
@@ -41,9 +46,10 @@ public class DAO_SanPham {
     // =========================
     public boolean insertSanPham(SanPham sp) {
         String sql = "INSERT INTO SanPham (maSP, tenSP, giaSP, moTaSP, hinhAnhSP, tinhTrangSP, loaiSP) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, sp.getMaSP());
             ps.setString(2, sp.getTenSP());
             ps.setDouble(3, sp.getGiaSP());
@@ -51,7 +57,6 @@ public class DAO_SanPham {
             ps.setString(5, sp.getHinhAnhSP());
             ps.setBoolean(6, sp.isTinhTrangSP());
             ps.setString(7, sp.getLoaiSP());
-
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi khi thêm sản phẩm: " + e.getMessage());
@@ -64,9 +69,10 @@ public class DAO_SanPham {
     // =========================
     public boolean updateSanPham(SanPham sp) {
         String sql = "UPDATE SanPham SET tenSP=?, giaSP=?, moTaSP=?, hinhAnhSP=?, tinhTrangSP=?, loaiSP=? WHERE maSP=?";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, sp.getTenSP());
             ps.setDouble(2, sp.getGiaSP());
             ps.setString(3, sp.getMoTaSP());
@@ -74,7 +80,6 @@ public class DAO_SanPham {
             ps.setBoolean(5, sp.isTinhTrangSP());
             ps.setString(6, sp.getLoaiSP());
             ps.setString(7, sp.getMaSP());
-
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi khi cập nhật sản phẩm: " + e.getMessage());
@@ -87,9 +92,10 @@ public class DAO_SanPham {
     // =========================
     public boolean deleteSanPham(String maSP) {
         String sql = "DELETE FROM SanPham WHERE maSP=?";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maSP);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -103,9 +109,10 @@ public class DAO_SanPham {
     // =========================
     public SanPham findById(String maSP) {
         String sql = "SELECT * FROM SanPham WHERE maSP=?";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return null;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maSP);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -132,9 +139,10 @@ public class DAO_SanPham {
     public List<SanPham> findByLoai(String loaiSP) {
         List<SanPham> ds = new ArrayList<>();
         String sql = "SELECT * FROM SanPham WHERE loaiSP = ?";
-        try (Connection con = ConnectDB.getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return ds;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, loaiSP);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -160,10 +168,11 @@ public class DAO_SanPham {
     // =========================
     public List<SanPham> findByTen(String keyword) {
         List<SanPham> ds = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham WHERE tenSP LIKE ?";
-        try (Connection con = ConnectDB.getInstance().getCon();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        String sql = "SELECT TOP 10 * FROM SanPham WHERE tenSP LIKE ?";
+        Connection con = ConnectDB.getCon();
+        if (con == null) return ds;
 
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, "%" + keyword + "%");
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
