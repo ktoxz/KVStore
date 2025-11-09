@@ -20,7 +20,7 @@ public class ConnectDB {
     public void connect() throws SQLException {
 
         String url = "jdbc:sqlserver://localhost:1433;"
-                +"databaseName=MediWOW;"
+                +"databaseName=n3_qlCuaHangTienLoi;"
                 +"encrypt=true;"
                 +"trustServerCertificate=true;";
         String user = "sa";
