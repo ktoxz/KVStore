@@ -2,8 +2,13 @@ package com.gui;
 
 import com.dao.DAO_SanPham;
 import com.dao.DAO_KhachHang;
+import com.dao.DAO_HoaDon;
+import com.dao.DAO_Staff;
 import com.entity.SanPham;
 import com.entity.KhachHang;
+import com.entity.HoaDon;
+import com.entity.CT_HoaDon;
+import com.service.PDFExportService;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
@@ -42,6 +47,8 @@ public class TAB_BanHang extends JPanel {
 
     private DAO_SanPham daoSP = new DAO_SanPham();
     private DAO_KhachHang daoKH = new DAO_KhachHang();
+    private DAO_HoaDon daoHD = new DAO_HoaDon();
+    private DAO_Staff daoStaff = new DAO_Staff();
     private JPopupMenu popupSearch; // Di chuyển ra ngoài để tái sử dụng
     
     // Customer info fields
@@ -54,6 +61,10 @@ public class TAB_BanHang extends JPanel {
     private JButton btnAddCustomer;
     private JButton btnSuDungDiem;
     private KhachHang currentCustomer = null;
+
+    // Thông tin nhân viên đăng nhập (mặc định, cần truyền từ GUI_Login)
+    private String maNhanVien = "NV00000001"; // Có thể set từ bên ngoài
+    private String tenNhanVien = "Nhân viên"; // Có thể set từ bên ngoài
 
     public TAB_BanHang() {
         setLayout(new BorderLayout(10, 10));
@@ -578,32 +589,131 @@ public class TAB_BanHang extends JPanel {
                 JOptionPane.YES_NO_OPTION);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // Cập nhật điểm tích lũy cho khách hàng
-                if (currentCustomer != null) {
-                    // Trừ điểm đã sử dụng
-                    if (diemDaSuDung > 0) {
-                        daoKH.truDiemTichLuy(currentCustomer.getMaKH(), diemDaSuDung);
+                try {
+                    // Lấy mã nhân viên từ database
+                    String maNV = daoStaff.getFirstMaNV();
+                    if (maNV == null) {
+                        JOptionPane.showMessageDialog(this,
+                            "Không tìm thấy nhân viên trong hệ thống!\nVui lòng thêm nhân viên trước khi thanh toán.",
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
-                    // Thêm điểm tích lũy từ tổng tiền (trước VAT)
-                    daoKH.themDiemTichLuy(currentCustomer.getMaKH(), tongTien);
+
+                    // Tạo hóa đơn
+                    String maHD = daoHD.phatSinhMaHoaDon();
+                    HoaDon hoaDon = new HoaDon();
+                    hoaDon.setMaHoaDon(maHD);
+                    hoaDon.setNgayGiaoDich(LocalDate.now());
+                    hoaDon.setThongTinChung(txtNote.getText().trim());
+                    hoaDon.setTienKhach(tienKhachTra);
+                    hoaDon.setThue(tongTien * 0.08); // VAT 8%
+
+                    // Nếu có khách hàng thì dùng mã khách hàng, không thì để mã khách vãng lai
+                    if (currentCustomer != null) {
+                        hoaDon.setMaKH(currentCustomer.getMaKH());
+                    } else {
+                        // Tìm hoặc tạo khách vãng lai
+                        KhachHang khachVangLai = daoKH.timKiemKH("0000000000");
+                        if (khachVangLai == null) {
+                            // Tạo khách vãng lai nếu chưa có
+                            khachVangLai = new KhachHang("KH00000000", "Khách vãng lai", true, "0000000000", LocalDate.now(), 0);
+                            daoKH.themKH(khachVangLai);
+                        }
+                        hoaDon.setMaKH("KH00000000");
+                    }
+
+                    hoaDon.setMaNV(maNV); // Sử dụng mã nhân viên từ database
+                    hoaDon.setMaKM(null); // Chưa có khuyến mãi
+
+                    // Thêm chi tiết hóa đơn
+                    for (int i = 0; i < mdlTable.getRowCount(); i++) {
+                        String maSP = mdlTable.getValueAt(i, 1).toString();
+                        String tenSP = mdlTable.getValueAt(i, 2).toString();
+                        int soLuong = Integer.parseInt(mdlTable.getValueAt(i, 3).toString());
+                        String priceStr = mdlTable.getValueAt(i, 4).toString().replace(",", "").replace(".", "").trim();
+                        double giaSP = Double.parseDouble(priceStr);
+
+                        CT_HoaDon chiTiet = new CT_HoaDon(maHD, maSP, soLuong, tenSP, giaSP);
+                        hoaDon.addChiTiet(chiTiet);
+                    }
+
+                    // Lưu hóa đơn vào database
+                    boolean luuThanhCong = daoHD.themHoaDon(hoaDon);
+
+                    if (luuThanhCong) {
+                        // Cập nhật điểm tích lũy cho khách hàng
+                        if (currentCustomer != null) {
+                            // Trừ điểm đã sử dụng
+                            if (diemDaSuDung > 0) {
+                                daoKH.truDiemTichLuy(currentCustomer.getMaKH(), diemDaSuDung);
+                            }
+                            // Thêm điểm tích lũy từ tổng tiền (sau khi trừ 1000)
+                            int diemMoi = (int)(tongTien / 1000);
+                            if (diemMoi > 0) {
+                                daoKH.themDiemTichLuy(currentCustomer.getMaKH(), tongTien);
+                            }
+                        }
+
+                        // Lấy số lần xuất hóa đơn
+                        int soLanXuatHD = daoHD.getSoLanXuatHoaDon(hoaDon.getMaKH());
+
+                        // Xuất PDF
+                        String pdfPath = PDFExportService.xuatHoaDonPDF(
+                            hoaDon,
+                            currentCustomer,
+                            tenNhanVien,
+                            soLanXuatHD,
+                            tienGiamTuDiem,
+                            diemDaSuDung
+                        );
+
+                        if (pdfPath != null) {
+                            JOptionPane.showMessageDialog(this,
+                                "Thanh toán thành công!\n" +
+                                "Mã hóa đơn: " + maHD + "\n" +
+                                "Hóa đơn đã được xuất ra: " + pdfPath,
+                                "Thành công",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(this,
+                                "Thanh toán thành công!\n" +
+                                "Mã hóa đơn: " + maHD + "\n" +
+                                "Nhưng có lỗi khi xuất PDF!",
+                                "Cảnh báo",
+                                JOptionPane.WARNING_MESSAGE);
+                        }
+
+                        // Reset form về trạng thái ban đầu
+                        tienKhachTra = 0;
+                        txtKhachTraField.setText("0");
+                        mdlTable.setRowCount(0);
+                        tongTien = 0;
+                        lblTongTien.setText("0");
+                        lblVAT.setText("0");
+                        lblTongCongValue.setText("0");
+                        txtPhone.setText("");
+                        txtName.setText("Khách vãng lai");
+                        txtDiem.setText("0");
+                        txtNote.setText("");
+                        pnlNewCustomer.setVisible(false);
+                        currentCustomer = null;
+                        resetDiemSuDung();
+                        capNhatTienThoi();
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                            "Có lỗi khi lưu hóa đơn vào cơ sở dữ liệu!",
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this,
+                        "Có lỗi xảy ra trong quá trình thanh toán:\n" + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
                 }
-
-                JOptionPane.showMessageDialog(this, "Thanh toán thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-
-                // Reset form
-                tienKhachTra = 0;
-                txtKhachTraField.setText("0");
-                mdlTable.setRowCount(0);
-                tongTien = 0;
-                lblTongTien.setText("0");
-                txtPhone.setText("");
-                txtName.setText("Khách vãng lai");
-                txtDiem.setText("0");
-                txtNote.setText("");
-                pnlNewCustomer.setVisible(false);
-                currentCustomer = null;
-                resetDiemSuDung();
-                capNhatTienThoi();
             }
         });
 
