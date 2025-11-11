@@ -7,7 +7,6 @@ import java.sql.Statement;
 import com.connectDB.ConnectDB;
 
 public class DAO_Staff {
-
     /**
      * Lấy mã nhân viên đầu tiên trong database
      * @return Mã nhân viên hoặc null nếu không có
