@@ -2,86 +2,32 @@ package com.gui;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
+import com.dao.DAO_SanPham;
 import com.entity.SanPham;
 
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.swing.border.TitledBorder;
+import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
-import java.awt.Font;
-import java.awt.Color;
 
 
 public class TAB_SanPham extends JPanel implements ActionListener, MouseListener {
 	
-	interface LoaiSPRepo {
-		String nextId();
-
-		void save(SanPham sp);
-
-		void update(SanPham sp);
-
-		void deleteById(String ma);
-
-		Optional<SanPham> findById(String ma);
-
-		List<SanPham> findAll();
-
-		List<SanPham> searchByKeyword(String kw);
-	}
-
-	static class InMemoryLoaiSPRepo implements LoaiSPRepo {
-		private final Map<String, SanPham> db = new LinkedHashMap<>();
-		private long seq = 0;
-
-		public synchronized String nextId() {
-			return String.format("LSP%04d", ++seq);
-		}
-
-		public synchronized void save(SanPham sp) {
-			db.put(sp.getMaSP(), sp);
-		}
-
-		public synchronized void update(SanPham sp) {
-			db.put(sp.getMaSP(), sp);
-		}
-
-		public synchronized void deleteById(String ma) {
-			db.remove(ma);
-		}
-
-		public synchronized Optional<SanPham> findById(String ma) {
-			return Optional.ofNullable(db.get(ma));
-		}
-
-		public synchronized List<SanPham> findAll() {
-			return new ArrayList<>(db.values());
-		}
-
-		public synchronized List<SanPham> searchByKeyword(String kw) {
-			String k = kw == null ? "" : kw.trim().toLowerCase();
-			if (k.isEmpty())
-				return findAll();
-			return db.values().stream()
-					.filter(sp -> sp.getMaSP().toLowerCase().contains(k)
-							|| sp.getTenSP().toLowerCase().contains(k)
-							|| sp.getMoTaSP().toLowerCase().contains(k)
-							|| sp.getLoaiSP().toLowerCase().contains(k))
-					.collect(Collectors.toList());
-		}
-	}
-	
-	final LoaiSPRepo repo;
+	DAO_SanPham dao;
 
 	// Theme
 	static final Color
@@ -100,70 +46,177 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	JTable tbl;
 	DefaultTableModel mdl;
 	JLabel lblPreview;
+	
+	// Paging (SQL-based)
+	int pageSize = 10, currentPage = 1, totalPages = 1;
+	JPanel pnlPaging;
+	JLabel lbPageInfo;
 
+	
 	// Sizes
-	static final int THUMB_W = 56, THUMB_H = 56, PREVIEW_W = 300, PREVIEW_H = 220, FORM_FIELD_W = 240, BTN_H = 32;
+	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
+	
+	// Img Dir
+	private static final String IMG_DIR = "src/main/resources/sp_image"; 
+	
+	//data
+	List<SanPham> dsAll = new ArrayList<>();
+
 
 	public TAB_SanPham() {
-		this(new InMemoryLoaiSPRepo(), Collections.emptyList());
-	}
-
-	public TAB_SanPham(LoaiSPRepo repo, List<SanPham> initialData) {
 		
-		this.repo = repo == null ? new InMemoryLoaiSPRepo() : repo;
+		dao = new DAO_SanPham();
+		
 		setLayout(new BorderLayout(10, 10));
 		setBorder(new EmptyBorder(10, 10, 10, 10));
 		add(buildNorthSearch(), BorderLayout.NORTH);
+		
+		JComponent cenTab = buildCenterTable();
+		JComponent eastForm = buildEastForm();
+		
+		cenTab.setBorder( createTitleBorder( "Danh sách sản phẩm", new Color(30,144,255), 20f, 1 ) );
+		eastForm.setBorder( createTitleBorder( "Thông tin sản phẩm", new Color(30,144,255), 20f, 1 ) );
 
-		JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildCenterTable(), buildEastForm());
-		split.setResizeWeight(0.68);
+		JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, cenTab, eastForm);
+		split.setResizeWeight(0.70);
 		split.setContinuousLayout(true);
-		split.setOneTouchExpandable(true);
-		split.setDividerLocation( 700 );
-		
-		final double MIN_PCT = 0.35, MAX_PCT = 0.70;
-		
-		split.addComponentListener(new java.awt.event.ComponentAdapter() {
-		  @Override public void componentResized(java.awt.event.ComponentEvent e) {
-		    int span = split.getWidth() - split.getDividerSize();
-		    if (span <= 0) return;
-		    java.awt.Component left  = split.getLeftComponent();
-		    java.awt.Component right = split.getRightComponent();
-		    left.setMinimumSize(new java.awt.Dimension((int)Math.round(span * MIN_PCT), 1));
-		    right.setMinimumSize(new java.awt.Dimension((int)Math.round(span * (1 - MAX_PCT)), 1));
-		  }
-		});
+		split.setOneTouchExpandable(false);
+		split.setDividerLocation( 0.70 );
+		split.setEnabled(false);      // khoá kéo bằng chuột
+		split.setDividerSize(0);      // ẩn/tháo “tay nắm” kéo
+		split.setFocusable(false);    // tránh điều khiển bằng phím
+	
 		
 		add(split, BorderLayout.CENTER);
-
-		if (initialData != null) {
-			for (SanPham sp : initialData) {
-				String ma = (sp.getMaSP() == null || sp.getMaSP().isEmpty()) ? this.repo.nextId() : sp.getMaSP();
-				this.repo.save(new SanPham(ma, sp.getTenSP(), sp.getGiaSP(), sp.getMoTaSP(), sp.getHinhAnhSP(), sp.isTinhTrangSP(), sp.getLoaiSP()));
-			}
-		}
 		
-		
-		reloadTable();
+		setTable(dao.getAllSanPham());
 		bindEvents();
 		setFormModeNew();
 		
-		setBorder(
-				new CompoundBorder(
-						new EmptyBorder(8, 8, 8, 8),
-						new CompoundBorder(				
-							    new TitledBorder(
-							        new LineBorder(new Color(200,200,200), 0),    
-							        "QUẢN LÝ SẢN PHẨM",                           
-							        TitledBorder.LEFT, TitledBorder.TOP,          // canh trái, trên
-							        getFont().deriveFont(Font.BOLD, 22f),         // chữ đậm như hình
-							        new Color(0,102,204)                          // xanh dương
-							    ),
-							    new EmptyBorder(10, 12, 12, 12)                   // padding nội dung
-						)
-				)
-		);
+		setBorder( createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 0) );
+
 	}
+	
+	private void setTable(List<SanPham> ds) {
+		currentPage = 1;
+		dsAll = ds;
+		reloadTable();
+	}
+	
+	// tải bảng và dữ liệu
+	//	maSP, tenSP, giaSP, moTaSP, hinhAnhSP, tinhTrangSP, loaiSP
+	private void loadTable(List<SanPham> ds) {
+	    mdl.setRowCount(0);
+	    for (SanPham sp : ds) {
+	    	
+//	    	Path p = Paths.get(sp.getHinhAnhSP());
+//	    	if (!p.isAbsolute()) p = Paths.get(IMG_DIR).resolve(p);
+	    	
+	        ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
+	        String giaStr = formatGia(sp.getGiaSP()); // đổi sang String cho khớp getColumnClass
+	        mdl.addRow(new Object[]{
+	            icon,                  // 0: Ảnh (ImageIcon)
+	            sp.getMaSP(),          // 1: Mã
+	            sp.getTenSP(),         // 2: Tên
+	            sp.getMoTaSP(),        // 3: Mô tả
+	            giaStr,                // 4: Giá (String)
+	            sp.getLoaiSP(),        // 5: Loại
+	            sp.isTinhTrangSP() ,   // 6: Hoạt động (Boolean)
+	        });
+	    }
+	}
+	
+	//tải trang hiên tại
+	private void reloadTable() {
+	    if (dsAll == null) dsAll = dao.getAllSanPham();
+
+	    totalPages = Math.max(1, (int) Math.ceil(dsAll.size() / (double) pageSize));
+	    if (currentPage < 1) currentPage = 1;
+	    if (currentPage > totalPages) currentPage = totalPages;
+
+	    int from = (currentPage - 1) * pageSize;
+	    int to   = Math.min(from + pageSize, dsAll.size());
+	    if (from < 0) from = 0;
+	    if (to < from) to = from;
+
+	    loadTable(dsAll.subList(from, to));
+	    rebuildPaging(dsAll.size());
+	}
+
+
+	private void rebuildPaging(int total) {
+	    if (pnlPaging == null) return;
+	    pnlPaging.removeAll();
+
+	    int window = 7;
+	    int start = Math.max(1, currentPage - window/2);
+	    int end   = Math.min(totalPages, start + window - 1);
+	    start = Math.max(1, end - window + 1);
+
+	    pnlPaging.add(pageBtn("<<", 1, currentPage > 1, false));
+	    pnlPaging.add(pageBtn("<", currentPage - 1, currentPage > 1, false));
+	    for (int p = start; p <= end; p++) {
+	        pnlPaging.add(pageBtn(String.valueOf(p), p, true, p == currentPage));
+	    }
+	    pnlPaging.add(pageBtn(">", currentPage + 1, currentPage < totalPages, false));
+	    pnlPaging.add(pageBtn(">>", totalPages, currentPage < totalPages, false));
+
+	    lbPageInfo.setText("Trang " + currentPage + "/" + totalPages + " • " + total + " mục");
+	    lbPageInfo.setBorder(new EmptyBorder(0, 12, 0, 0));
+	    pnlPaging.add(lbPageInfo);
+
+	    pnlPaging.revalidate();
+	    pnlPaging.repaint();
+	}
+
+	private JButton pageBtn(String text, int target, boolean enabled, boolean active) {
+	    JButton b = new JButton(text);
+	    b.setEnabled(enabled);
+	    b.setPreferredSize(new Dimension(42, BTN_H));
+	    if (active) {
+	        b.setBackground(CLR_PRIMARY);
+	        b.setForeground(CLR_TEXT_LIGHT);
+	    }
+	    b.addActionListener(e -> { currentPage = target; reloadTable(); });
+	    return b;
+	}
+
+	
+	private String nextIdFromDB() {
+	    int next = 1;
+	    for (SanPham sp : dao.getAllSanPham()) {
+	        String id = sp.getMaSP();
+	        if (id != null && id.matches("SP\\d+")) {
+	            int n = Integer.parseInt(id.replaceAll("\\D+", ""));
+	            if (n >= next) next = n + 1;
+	        }
+	    }
+	    return String.format("SP%03d", next);
+	}
+
+	
+	
+	// build các tiểu cấu trúc
+	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
+	private static Border createTitleBorder(String title, Color titleColor, float fontSizePt, int lineThickness) {
+	    Font base = UIManager.getFont("Label.font");
+	    if (base == null) base = new Font("SansSerif", Font.PLAIN, 14);
+
+	    return new CompoundBorder(
+	        new EmptyBorder(8, 8, 8, 8), // mép ngoài
+	        new CompoundBorder(
+	            new TitledBorder(
+	                new LineBorder(new Color(200, 200, 200), lineThickness, true), // độ dày viền
+	                title,
+	                TitledBorder.LEFT, TitledBorder.TOP,
+	                base.deriveFont(Font.BOLD, fontSizePt), // cỡ chữ
+	                titleColor                               // màu chữ
+	            ),
+	            new EmptyBorder(10, 12, 12, 12) // padding nội dung
+	        )
+	    );
+	}
+
 
 	private JComponent buildNorthSearch() {
 		
@@ -182,6 +235,11 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private JComponent buildCenterTable() {
 		String[] cols = { "Ảnh", "Mã", "Tên sản phẩm", "Mô tả", "Giá", "Loại", "Hoạt động" };
 		mdl = new DefaultTableModel(cols, 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			public boolean isCellEditable(int r, int c) {
 				return false;
 			}
@@ -195,8 +253,33 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			}
 		};
 		
+
+		
 		tbl = new JTable(mdl);
 		tbl.setRowHeight(Math.max(THUMB_H + 8, 28));
+		
+	    TableColumn c6 = tbl.getColumnModel().getColumn(6);
+	    c6.setCellRenderer(new DefaultTableCellRenderer() {
+	      /**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+		  @Override public Component getTableCellRendererComponent(
+	          JTable t,Object v,boolean sel,boolean focus,int r,int c) {
+	        JLabel L = (JLabel) super.getTableCellRendererComponent(t, "", sel, focus, r, c);
+	        boolean on = Boolean.TRUE.equals(v);
+	        L.setText(on ? "Đang hoạt động" : "Ngừng");
+	        if (!sel) {
+	          L.setBackground(on ? new Color(220,248,231) : new Color(255,235,238));
+	          L.setForeground(on ? new Color(24,121,78)   : new Color(183,28,28));
+	        }
+	        L.setHorizontalAlignment(SwingConstants.CENTER);
+	        L.setOpaque(true);
+	        return L;
+	      }
+	    });
+		
 		tbl.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tbl.addMouseListener(this);
 		JScrollPane sp = new JScrollPane(tbl);
@@ -204,7 +287,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		TableColumnModel tcm = tbl.getColumnModel();
 		tcm.getColumn(0).setPreferredWidth(THUMB_W + 16);
 		tcm.getColumn(0).setMaxWidth(THUMB_W + 24);
-		return sp;
+		
+		JPanel wrap = new JPanel(new BorderLayout());
+		wrap.add(sp, BorderLayout.CENTER);
+
+		pnlPaging = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 6));
+		pnlPaging.setBorder(new EmptyBorder(6, 0, 0, 0));
+		lbPageInfo = new JLabel();
+		wrap.add(pnlPaging, BorderLayout.SOUTH);
+
+		return wrap;
+
 	}
 
 	private JComponent buildEastForm() {
@@ -272,22 +365,24 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		JLabel lbImg = new JLabel("Hình ảnh:");
 		gbc.gridy++;
 		gbc.gridx = 0;
-		gbc.gridwidth = 4;
-		gbc.weightx = 1;
+		gbc.gridwidth = 1;
+		gbc.weightx = 0;
 		gbc.weighty = 0;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.fill = GridBagConstraints.NONE;
 		p.add(lbImg, gbc);
 
 		// --- Preview
 		lblPreview = new JLabel(scaledOrPlaceholder(null, PREVIEW_W, PREVIEW_H));
-		fixSize(lblPreview, PREVIEW_W, PREVIEW_H);
+			
+		lblPreview.setPreferredSize(new Dimension(0, PREVIEW_H)); // rộng linh hoạt
+		lblPreview.setMinimumSize(new Dimension(200, PREVIEW_H)); // tránh quá nhỏ
+		
 		lblPreview.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-		gbc.gridy++;
-		gbc.gridx = 0;
-		gbc.gridwidth = 4;
+		gbc.gridx = 1;
+		gbc.gridwidth = 3;
 		gbc.weightx = 1;
 		gbc.weighty = 0;
-		gbc.fill = GridBagConstraints.NONE;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
 		p.add(lblPreview, gbc);
 
 		// --- Hàng link + nút 
@@ -386,13 +481,6 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		b.setFocusPainted(false);
 	}
 
-	private void fixSize(JComponent c, int w, int h) {
-		Dimension d = new Dimension(w, h);
-		c.setPreferredSize(d);
-		c.setMinimumSize(d);
-		c.setMaximumSize(d);
-	}
-
 	private String formatGia(double v) {
 		if (v <= 0)
 			return "0";
@@ -412,19 +500,6 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 	}
 
-	// ====== Data binding ======
-	private void reloadTable() {
-		fillTable(repo.findAll());
-	}
-
-	private void fillTable(List<SanPham> data) {
-		mdl.setRowCount(0);
-		for (SanPham sp : data) {
-			ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
-			String giaStr = formatGia(sp.getGiaSP());
-			mdl.addRow(new Object[] { icon, sp.getMaSP(), sp.getTenSP(), sp.getMoTaSP(), giaStr, sp.getLoaiSP(), sp.isTinhTrangSP() });
-		}
-	}
 
 	private void bindEvents() {
 		btnThem.addActionListener(this);
@@ -492,20 +567,25 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 				txtGia.requestFocus();
 				return;
 			}
-			String ma = repo.nextId();
+			String ma = nextIdFromDB();
 			String moTa = txtMoTa.getText().trim();
 			String loai = txtLoai.getText().trim();
 			boolean active = chkActive.isSelected();
 			String path = txtPathAnh.getText().trim();
 			if (path.isEmpty())
 				path = null;
-			repo.save(new SanPham(ma, ten, gia, moTa, path, active, loai));
+			
+			SanPham sp = new SanPham(ma, ten, gia, moTa, path, active, loai);
+			
+			dao.insertSanPham(sp);
+			dsAll.add(sp);
+			
 			reloadTable();
 			selectRowById(ma);
 			return;
 		}
 
-		if (o.equals(btnLuu)) { // lưu/cập nhật theo mã
+		if (o.equals(btnLuu)) { // lưu cập nhật theo mã
 			String ma = txtMa.getText().trim();
 			String ten = txtTen.getText().trim();
 			if (ten.isEmpty()) {
@@ -523,13 +603,29 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String loai = txtLoai.getText().trim();
 			boolean active = chkActive.isSelected();
 			String path = txtPathAnh.getText().trim();
-			if (path.isEmpty())
+			
+			if (path.isEmpty()) {
 				path = null;
+			}
+			
 			if (ma.isEmpty()) {
-				ma = repo.nextId();
-				repo.save(new SanPham(ma, ten, gia, moTa, path, active, loai));
-			} else
-				repo.update(new SanPham(ma, ten, gia, moTa, path, active, loai));
+				ma = nextIdFromDB();
+			}
+			
+			SanPham sp = new SanPham(ma, ten, gia, moTa, path, active, loai);
+			dao.deleteSanPham(ma);
+			dao.insertSanPham(sp);
+
+			if (dsAll != null) {
+				for (int i = 0; i < dsAll.size(); i++) {
+			        if (ma.equals(String.valueOf(dsAll.get(i).getMaSP()))) {
+			            dsAll.set(i, sp);
+			            break;
+			        }
+			    }
+			}
+			
+			
 			reloadTable();
 			selectRowById(ma);
 			return;
@@ -542,11 +638,22 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 				return;
 			}
 			String ma = String.valueOf(mdl.getValueAt(row, 1));
+			
 			int isXoa = JOptionPane.showConfirmDialog(this, "Bạn thật sự muốn xoá không?", "Xác nhận",
 					JOptionPane.YES_NO_OPTION);
+			
 			if (isXoa == JOptionPane.NO_OPTION)
 				return;
-			repo.deleteById(ma);
+			
+			if (!dao.deleteSanPham(ma)) {
+			    JOptionPane.showMessageDialog(this, "Xoá thất bại!");
+			    return;
+			}
+			
+			if (dsAll != null) {
+			    dsAll.removeIf(sp -> ma.equals(String.valueOf(sp.getMaSP())));
+			}
+			
 			reloadTable();
 			setFormModeNew();
 			JOptionPane.showMessageDialog(this, "Đã xoá thành công!");
@@ -554,8 +661,43 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 
 		if (o.equals(btnTim) || o.equals(txtSearch)) {
-			String kw = txtSearch.getText();
-			fillTable(repo.searchByKeyword(kw));
+			String kw = txtSearch.getText().trim();
+			
+			if(kw.isEmpty()) {
+				setTable(dao.getAllSanPham());
+				return;
+			}
+				
+			List<SanPham> dataLs = dao.getAllSanPham();
+			List<SanPham> ans = new ArrayList<SanPham>(); 
+			
+			boolean ok;
+			
+			for(SanPham x : dataLs) {
+				String [] strLs = {
+						x.getMaSP(), 
+						x.getTenSP(), 
+						x.getMoTaSP(), 
+						Double.toString(x.getGiaSP()), 
+						x.isTinhTrangSP() ? "Đang hoạt động" : "Ngừng",
+						x.getLoaiSP(),
+				}; 
+				
+				ok = false;
+				
+				for(String subS : strLs) {
+					if(subS.toLowerCase().contains(kw.toLowerCase())) {
+						ok = true;
+						break;
+					}
+				}
+				
+				if(ok) {
+					ans.add(x);
+				}
+			}
+			
+			setTable(ans);
 			return;
 		}
 
@@ -582,7 +724,10 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			int r = tbl.getSelectedRow();
 			if (r >= 0) {
 				String ma = String.valueOf(mdl.getValueAt(r, 1));
-				repo.findById(ma).ifPresent(this::fillForm);
+				
+				SanPham sp = dao.findById(ma);
+				if (sp != null) fillForm(sp);
+				
 			}
 			if (e.getClickCount() == 2 && !e.isConsumed()) {
 				e.consume();
@@ -645,8 +790,6 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 //		SwingUtilities.invokeLater(() -> {
 //			JFrame f = new JFrame("QL Loại SP - Grid Right + Giá");
 //			TAB_SanPham p = new TAB_SanPham();
-//			p.repo.save(new SanPham(p.repo.nextId(), "Đồ uống 2", "Các loại nước giải khát", true, null, 15000));
-//			p.repo.save(new SanPham(p.repo.nextId(), "Bánh kẹo", "Đồ ngọt các loại", true, null, 12000));
 //			p.reloadTable();
 //			f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 //			f.setContentPane(p);
