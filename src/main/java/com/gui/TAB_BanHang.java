@@ -1,7 +1,9 @@
 package com.gui;
 
 import com.dao.DAO_SanPham;
+import com.dao.DAO_KhachHang;
 import com.entity.SanPham;
+import com.entity.KhachHang;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
@@ -11,18 +13,27 @@ import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class TAB_BanHang extends JPanel {
 
+    private JLabel lblName;
+    private JLabel lblDiem;
+    private JLabel lblPhone;
     private double tongTien = 0;
     private double tienKhachTra = 0;
+    private double tienGiamTuDiem = 0; // Số tiền giảm từ điểm tích lũy
+    private int diemDaSuDung = 0; // Số điểm đã sử dụng
 
     private JTextField txtKhachTraField;
     private JLabel lblTienThoiValue;
     private JLabel lblTongTien;
+    private JLabel lblVAT;
+    private JLabel lblTongCongValue;
+    private JLabel lblDiemGiamValue;
     private JPanel pnlMenhGia;
     private JLabel lblKhachTraRow, lblTienThoiRow;
     private JTable table;
@@ -30,7 +41,19 @@ public class TAB_BanHang extends JPanel {
     private final DecimalFormat df = new DecimalFormat("#,###");
 
     private DAO_SanPham daoSP = new DAO_SanPham();
+    private DAO_KhachHang daoKH = new DAO_KhachHang();
     private JPopupMenu popupSearch; // Di chuyển ra ngoài để tái sử dụng
+    
+    // Customer info fields
+    private JTextField txtPhone;
+    private JTextField txtName;
+    private JTextArea txtNote;
+    private JTextField txtDiem;
+    private JPanel pnlNewCustomer;
+    private JRadioButton rbNam, rbNu;
+    private JButton btnAddCustomer;
+    private JButton btnSuDungDiem;
+    private KhachHang currentCustomer = null;
 
     public TAB_BanHang() {
         setLayout(new BorderLayout(10, 10));
@@ -84,7 +107,7 @@ public class TAB_BanHang extends JPanel {
                     public void run() {
                         SwingUtilities.invokeLater(() -> {
                             String kw = txtSearch.getText().trim();
-                            popupSearch.setVisible(false); // Ẩn trước khi cập nhật
+                            popupSearch.setVisible(false);
                             popupSearch.removeAll();
                             if (kw.isEmpty()) {
                                 return;
@@ -97,9 +120,9 @@ public class TAB_BanHang extends JPanel {
                                 popupSearch.add(none);
                             } else {
                                 for (SanPham sp : ds) {
-                                    // Tạo custom menu item với icon và text
                                     JMenuItem menuItem = new JMenuItem();
-                                    menuItem.setPreferredSize(new Dimension(350, 60));
+                                    menuItem.setPreferredSize(new Dimension(txtSearch.getWidth(), 60));
+                                    menuItem.setMaximumSize(new Dimension(txtSearch.getWidth(), 60));
                                     menuItem.setBackground(Color.WHITE);
                                     
                                     // Load icon cho menu item
@@ -130,14 +153,12 @@ public class TAB_BanHang extends JPanel {
                                     menuItem.addActionListener(ev -> {
                                         themSanPham(sp);
                                         popupSearch.setVisible(false);
-                                        txtSearch.setText(""); // Xóa ô tìm kiếm sau khi chọn
-                                        txtSearch.requestFocus();
+                                        txtSearch.setText("");
                                     });
                                     popupSearch.add(menuItem);
                                 }
                             }
-                            // Hiển thị lại popup với nội dung mới
-                            popupSearch.pack(); // Đảm bảo kích thước phù hợp
+                            popupSearch.pack();
                             popupSearch.show(txtSearch, 0, txtSearch.getHeight());
                         });
                     }
@@ -151,7 +172,6 @@ public class TAB_BanHang extends JPanel {
         txtSearch.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                // Delay nhỏ để cho phép click vào item trong popup
                 SwingUtilities.invokeLater(() -> {
                     if (!popupSearch.isVisible()) return;
                     popupSearch.setVisible(false);
@@ -225,19 +245,148 @@ public class TAB_BanHang extends JPanel {
         gbc.insets = new Insets(5, 6, 5, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel lblPhone = new JLabel("SĐT KH:");
-        JLabel lblName = new JLabel("Tên KH:");
-        JLabel lblNote = new JLabel("Ghi chú:");
-        JTextField txtPhone = new JTextField();
-        JTextField txtName = new JTextField();
-        JTextField txtNote = new JTextField();
+        lblPhone = new JLabel("SĐT KH:");
+        lblName = new JLabel("Tên KH:");
+        lblDiem = new JLabel("Điểm tích lũy:");
+        JLabel lblNoteLabel = new JLabel("Ghi chú:");
 
-        gbc.gridx = 0; gbc.gridy = 0; pnlKH.add(lblPhone, gbc);
+        txtPhone = new JTextField();
+        txtName = new JTextField();
+        txtName.setEnabled(false);
+        txtDiem = new JTextField();
+        txtDiem.setEnabled(false);
+        txtNote = new JTextArea(3, 20);
+        txtNote.setLineWrap(true);
+        txtNote.setWrapStyleWord(true);
+        txtNote.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        JScrollPane scrollNote = new JScrollPane(txtNote);
+
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; pnlKH.add(lblPhone, gbc);
         gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtPhone, gbc);
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0; pnlKH.add(lblName, gbc);
         gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtName, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; pnlKH.add(lblNote, gbc);
-        gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtNote, gbc);
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; pnlKH.add(lblDiem, gbc);
+        gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtDiem, gbc);
+
+        // Panel thêm khách hàng mới (ẩn mặc định)
+        pnlNewCustomer = new JPanel(new GridBagLayout());
+        pnlNewCustomer.setBackground(new Color(255, 248, 220));
+        pnlNewCustomer.setBorder(BorderFactory.createTitledBorder("Thêm khách hàng mới"));
+        pnlNewCustomer.setVisible(false);
+        
+        GridBagConstraints gbcNew = new GridBagConstraints();
+        gbcNew.insets = new Insets(5, 6, 5, 6);
+        gbcNew.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblNewName = new JLabel("Tên KH:");
+        JTextField txtNewName = new JTextField();
+        JLabel lblGender = new JLabel("Giới tính:");
+        rbNam = new JRadioButton("Nam", true);
+        rbNu = new JRadioButton("Nữ");
+        rbNam.setBackground(pnlNewCustomer.getBackground());
+        rbNu.setBackground(pnlNewCustomer.getBackground());
+        ButtonGroup bgGender = new ButtonGroup();
+        bgGender.add(rbNam);
+        bgGender.add(rbNu);
+        
+        JPanel pnlGender = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        pnlGender.setBackground(pnlNewCustomer.getBackground());
+        pnlGender.add(rbNam);
+        pnlGender.add(rbNu);
+
+        btnAddCustomer = new JButton("Thêm khách hàng");
+        styleButton(btnAddCustomer, new Color(27, 160, 79));
+        btnAddCustomer.setPreferredSize(new Dimension(150, 32));
+
+        gbcNew.gridx = 0; gbcNew.gridy = 0; gbcNew.weightx = 0; pnlNewCustomer.add(lblNewName, gbcNew);
+        gbcNew.gridx = 1; gbcNew.weightx = 1; pnlNewCustomer.add(txtNewName, gbcNew);
+        gbcNew.gridx = 0; gbcNew.gridy = 1; gbcNew.weightx = 0; pnlNewCustomer.add(lblGender, gbcNew);
+        gbcNew.gridx = 1; gbcNew.weightx = 1; pnlNewCustomer.add(pnlGender, gbcNew);
+        gbcNew.gridx = 0; gbcNew.gridy = 2; gbcNew.gridwidth = 2; gbcNew.anchor = GridBagConstraints.CENTER;
+        pnlNewCustomer.add(btnAddCustomer, gbcNew);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; gbc.weightx = 1;
+        pnlKH.add(pnlNewCustomer, gbc);
+
+        // Ghi chú ở cuối cùng
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1; gbc.weightx = 0; pnlKH.add(lblNoteLabel, gbc);
+        gbc.gridx = 1; gbc.weightx = 1; gbc.fill = GridBagConstraints.BOTH; pnlKH.add(scrollNote, gbc);
+
+        // Sự kiện tìm kiếm khách hàng khi nhập SĐT
+        txtPhone.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String sdt = txtPhone.getText().trim();
+                if (sdt.isEmpty()) {
+                    // Không nhập SĐT -> Khách vãng lai
+                    txtName.setText("Khách vãng lai");
+                    txtDiem.setText("0");
+                    pnlNewCustomer.setVisible(false);
+                    currentCustomer = null;
+                    resetDiemSuDung();
+                } else if (sdt.length() >= 10) {
+                    // Tìm kiếm khách hàng
+                    KhachHang kh = daoKH.timKiemKH(sdt);
+                    if (kh != null) {
+                        // Tìm thấy khách hàng
+                        currentCustomer = kh;
+                        txtName.setText(kh.getTenKH());
+                        txtDiem.setText(String.valueOf(kh.getDiemTichLuy()));
+                        pnlNewCustomer.setVisible(false);
+                        resetDiemSuDung();
+                    } else {
+                        // Không tìm thấy -> hiển thị form thêm mới
+                        txtName.setText("");
+                        txtDiem.setText("0");
+                        pnlNewCustomer.setVisible(true);
+                        currentCustomer = null;
+                        resetDiemSuDung();
+                    }
+                } else {
+                    txtName.setText("");
+                    txtDiem.setText("");
+                    pnlNewCustomer.setVisible(false);
+                    currentCustomer = null;
+                    resetDiemSuDung();
+                }
+                pnlKH.revalidate();
+                pnlKH.repaint();
+            }
+        });
+
+        // Sự kiện thêm khách hàng mới
+        btnAddCustomer.addActionListener(e -> {
+            String sdt = txtPhone.getText().trim();
+            String tenKH = txtNewName.getText().trim();
+            
+            if (sdt.isEmpty() || sdt.length() < 10) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            if (tenKH.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập tên khách hàng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            boolean gioiTinh = rbNam.isSelected();
+            KhachHang newKH = new KhachHang("", tenKH, gioiTinh, sdt, LocalDate.now(), 0);
+            
+            if (daoKH.themKH(newKH)) {
+                JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                // Tải lại thông tin khách hàng
+                KhachHang kh = daoKH.timKiemKH(sdt);
+                if (kh != null) {
+                    currentCustomer = kh;
+                    txtName.setText(kh.getTenKH());
+                    txtDiem.setText(String.valueOf(kh.getDiemTichLuy()));
+                    pnlNewCustomer.setVisible(false);
+                    txtNewName.setText("");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Thêm khách hàng thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         // --- Thanh toán ---
         JPanel pnlPayHeader = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
@@ -254,17 +403,55 @@ public class TAB_BanHang extends JPanel {
 
         Font fLabel = new Font("Segoe UI", Font.BOLD, 14);
 
+        // Giảm từ điểm (di chuyển lên đầu tiên)
+        JLabel lblDiemGiamRow = new JLabel("Giảm từ điểm:");
+        lblDiemGiamRow.setFont(fLabel);
+        lblDiemGiamRow.setForeground(new Color(27, 160, 79));
+        lblDiemGiamValue = new JLabel("- " + df.format(0));
+        lblDiemGiamValue.setFont(fLabel);
+        lblDiemGiamValue.setForeground(new Color(27, 160, 79));
+        gbc.gridx = 0; gbc.gridy = 0; pnlTotal.add(lblDiemGiamRow, gbc);
+        gbc.gridx = 1; pnlTotal.add(lblDiemGiamValue, gbc);
+
+        // Tổng tiền (chưa VAT)
         JLabel lblThanhTienRow = new JLabel("Tổng tiền:");
         lblThanhTienRow.setFont(fLabel);
         lblTongTien = new JLabel(df.format(0));
         lblTongTien.setFont(fLabel);
-        gbc.gridx = 0; gbc.gridy = 0; pnlTotal.add(lblThanhTienRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 1; pnlTotal.add(lblThanhTienRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblTongTien, gbc);
+
+        // VAT 8%
+        JLabel lblVATRow = new JLabel("VAT (8%):");
+        lblVATRow.setFont(fLabel);
+        lblVAT = new JLabel(df.format(0));
+        lblVAT.setFont(fLabel);
+        gbc.gridx = 0; gbc.gridy = 2; pnlTotal.add(lblVATRow, gbc);
+        gbc.gridx = 1; pnlTotal.add(lblVAT, gbc);
+
+        // Tổng cộng (đã VAT)
+        JLabel lblTongCongRow = new JLabel("Tổng cộng:");
+        lblTongCongRow.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblTongCongRow.setForeground(new Color(220, 53, 69));
+        lblTongCongValue = new JLabel(df.format(0));
+        lblTongCongValue.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblTongCongValue.setForeground(new Color(220, 53, 69));
+        gbc.gridx = 0; gbc.gridy = 3; pnlTotal.add(lblTongCongRow, gbc);
+        gbc.gridx = 1; pnlTotal.add(lblTongCongValue, gbc);
+
+
+        // Nút sử dụng điểm
+        btnSuDungDiem = new JButton("Sử dụng điểm (F1)");
+        styleButton(btnSuDungDiem, new Color(0, 123, 255));
+        btnSuDungDiem.setPreferredSize(new Dimension(180, 32));
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        pnlTotal.add(btnSuDungDiem, gbc);
 
         // Hình thức thanh toán
         JLabel lblHinhThuc = new JLabel("Hình thức:");
         lblHinhThuc.setFont(fLabel);
-        gbc.gridx = 0; gbc.gridy = 1; pnlTotal.add(lblHinhThuc, gbc);
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
+        pnlTotal.add(lblHinhThuc, gbc);
         JRadioButton rbCash = new JRadioButton("Tiền mặt", true);
         JRadioButton rbBank = new JRadioButton("Chuyển khoản");
         rbCash.setBackground(pnlTotal.getBackground());
@@ -289,9 +476,9 @@ public class TAB_BanHang extends JPanel {
         lblTienThoiValue = new JLabel(df.format(0));
         lblTienThoiValue.setFont(fLabel);
 
-        gbc.gridx = 0; gbc.gridy = 2; pnlTotal.add(lblKhachTraRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 6; pnlTotal.add(lblKhachTraRow, gbc);
         gbc.gridx = 1; pnlTotal.add(txtKhachTraField, gbc);
-        gbc.gridx = 0; gbc.gridy = 3; pnlTotal.add(lblTienThoiRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; pnlTotal.add(lblTienThoiRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblTienThoiValue, gbc);
 
         // --- Mệnh giá ---
@@ -310,7 +497,7 @@ public class TAB_BanHang extends JPanel {
             });
             pnlMenhGia.add(btn);
         }
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
+        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
 
         // Nút hành động
         JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -321,19 +508,41 @@ public class TAB_BanHang extends JPanel {
         styleButton(btnClear, new Color(220, 53, 69));
         pnlButtons.add(btnPay);
         pnlButtons.add(btnClear);
-        gbc.gridy = 5; gbc.gridx = 0; gbc.gridwidth = 2;
+        gbc.gridy = 9; gbc.gridx = 0; gbc.gridwidth = 2;
         pnlTotal.add(pnlButtons, gbc);
 
         // Gắn sự kiện
         rbCash.addActionListener(e -> setMenhGiaVisible(true));
         rbBank.addActionListener(e -> setMenhGiaVisible(false));
+
         btnClear.addActionListener(e -> {
             tienKhachTra = 0;
             txtKhachTraField.setText("0");
             mdlTable.setRowCount(0);
             tongTien = 0;
             lblTongTien.setText("0");
+            txtPhone.setText("");
+            txtName.setText("");
+            txtDiem.setText("");
+            txtNote.setText("");
+            pnlNewCustomer.setVisible(false);
+            currentCustomer = null;
+            resetDiemSuDung();
             capNhatTienThoi();
+        });
+
+        // Sự kiện sử dụng điểm
+        btnSuDungDiem.addActionListener(e -> xuLySuDungDiem());
+
+        // Key binding cho F1
+        InputMap inputMap = pnlTotal.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap actionMap = pnlTotal.getActionMap();
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "suDungDiem");
+        actionMap.put("suDungDiem", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                xuLySuDungDiem();
+            }
         });
 
         // Cập nhật tiền khách trả
@@ -343,6 +552,57 @@ public class TAB_BanHang extends JPanel {
                 if (text.isEmpty()) text = "0";
                 tienKhachTra = Double.parseDouble(text);
                 txtKhachTraField.setText(df.format(tienKhachTra));
+                capNhatTienThoi();
+            }
+        });
+
+        // Sự kiện thanh toán
+        btnPay.addActionListener(e -> {
+            if (mdlTable.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this, "Vui lòng thêm sản phẩm vào giỏ hàng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            double tongCong = getTongCong();
+            double tienCanTra = tongCong - tienGiamTuDiem;
+
+            if (rbCash.isSelected() && tienKhachTra < tienCanTra) {
+                JOptionPane.showMessageDialog(this, "Tiền khách trả chưa đủ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Xử lý thanh toán thành công
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Xác nhận thanh toán?\nTổng cộng: " + df.format(tienCanTra) + "đ",
+                "Xác nhận",
+                JOptionPane.YES_NO_OPTION);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                // Cập nhật điểm tích lũy cho khách hàng
+                if (currentCustomer != null) {
+                    // Trừ điểm đã sử dụng
+                    if (diemDaSuDung > 0) {
+                        daoKH.truDiemTichLuy(currentCustomer.getMaKH(), diemDaSuDung);
+                    }
+                    // Thêm điểm tích lũy từ tổng tiền (trước VAT)
+                    daoKH.themDiemTichLuy(currentCustomer.getMaKH(), tongTien);
+                }
+
+                JOptionPane.showMessageDialog(this, "Thanh toán thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+                // Reset form
+                tienKhachTra = 0;
+                txtKhachTraField.setText("0");
+                mdlTable.setRowCount(0);
+                tongTien = 0;
+                lblTongTien.setText("0");
+                txtPhone.setText("");
+                txtName.setText("Khách vãng lai");
+                txtDiem.setText("0");
+                txtNote.setText("");
+                pnlNewCustomer.setVisible(false);
+                currentCustomer = null;
+                resetDiemSuDung();
                 capNhatTienThoi();
             }
         });
@@ -358,6 +618,10 @@ public class TAB_BanHang extends JPanel {
         splitMain.setLeftComponent(pnlLeft);
         splitMain.setRightComponent(pnlRight);
         add(splitMain, BorderLayout.CENTER);
+        
+        // Khởi tạo mặc định
+        txtName.setText("Khách vãng lai");
+        txtDiem.setText("0");
     }
 
     private void styleButton(JButton btn, Color color) {
@@ -385,7 +649,17 @@ public class TAB_BanHang extends JPanel {
         int stt = mdlTable.getRowCount() + 1;
         mdlTable.addRow(new Object[]{stt, sp.getMaSP(), sp.getTenSP(), 1,
                 df.format(sp.getGiaSP()), df.format(sp.getGiaSP()), "X"});
+
         capNhatTongTien();
+
+        int lastRow = mdlTable.getRowCount() - 1;
+        table.requestFocus();
+        table.changeSelection(lastRow, 3, false, false); // chọn ô số lượng
+        table.editCellAt(lastRow, 3); // mở chế độ chỉnh sửa
+        Component editor = table.getEditorComponent();
+        if (editor != null) {
+            editor.requestFocusInWindow(); // đặt focus vào editor
+        }
     }
 
     private void capNhatTongTien() {
@@ -410,14 +684,110 @@ public class TAB_BanHang extends JPanel {
                 }
             }
         }
+
+        // Cập nhật hiển thị
         lblTongTien.setText(df.format(tongTien));
+
+        // Tính VAT 8%
+        double vat = tongTien * 0.08;
+        lblVAT.setText(df.format(vat));
+
+        // Tính tổng cộng
+        double tongCong = tongTien + vat;
+        lblTongCongValue.setText(df.format(tongCong));
+
         capNhatTienThoi();
     }
 
     private void capNhatTienThoi() {
-        double thoi = tienKhachTra - tongTien;
+        double tongCong = getTongCong();
+        double tienCanTra = tongCong - tienGiamTuDiem;
+        double thoi = tienKhachTra - tienCanTra;
         if (thoi < 0) thoi = 0;
         lblTienThoiValue.setText(df.format(thoi));
+    }
+
+    private void xuLySuDungDiem() {
+        if (currentCustomer == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập thông tin khách hàng để sử dụng điểm!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int diemHienTai = currentCustomer.getDiemTichLuy();
+        if (diemHienTai <= 0) {
+            JOptionPane.showMessageDialog(this, "Khách hàng không có điểm tích lũy!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Tính số tiền tối đa có thể sử dụng từ điểm (10 điểm = 1,000đ)
+        double tienToiDaTuDiem = (diemHienTai / 10.0) * 1000;
+        double tongCong = getTongCong();
+
+        String input = JOptionPane.showInputDialog(this,
+            "Điểm hiện tại: " + diemHienTai + " điểm\n" +
+            "Giá trị tối đa: " + df.format(tienToiDaTuDiem) + "đ\n" +
+            "Tổng cộng cần thanh toán: " + df.format(tongCong) + "đ\n\n" +
+            "Nhập số tiền muốn sử dụng (VNĐ):",
+            "Sử dụng điểm tích lũy",
+            JOptionPane.QUESTION_MESSAGE);
+
+        if (input == null || input.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            double tienSuDung = Double.parseDouble(input.trim().replaceAll("[^0-9]", ""));
+
+            if (tienSuDung <= 0) {
+                JOptionPane.showMessageDialog(this, "Số tiền phải lớn hơn 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (tienSuDung > tienToiDaTuDiem) {
+                JOptionPane.showMessageDialog(this, "Số tiền vượt quá giá trị điểm hiện có!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (tienSuDung > tongCong) {
+                JOptionPane.showMessageDialog(this, "Số tiền vượt quá tổng cộng cần thanh toán!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Tính số điểm cần trừ (làm tròn lên)
+            diemDaSuDung = (int) Math.ceil((tienSuDung / 1000.0) * 10);
+            tienGiamTuDiem = tienSuDung;
+
+            // Cập nhật hiển thị
+            lblDiemGiamValue.setText("- " + df.format(tienGiamTuDiem));
+
+            // Tự động cập nhật tiền khách trả
+            double tienCanTra = tongCong - tienGiamTuDiem;
+            tienKhachTra = tienCanTra;
+            txtKhachTraField.setText(df.format(tienKhachTra));
+
+            capNhatTienThoi();
+
+            JOptionPane.showMessageDialog(this,
+                "Đã áp dụng giảm giá " + df.format(tienGiamTuDiem) + "đ\n" +
+                "Sử dụng " + diemDaSuDung + " điểm",
+                "Thành công",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập số hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void resetDiemSuDung() {
+        tienGiamTuDiem = 0;
+        diemDaSuDung = 0;
+        lblDiemGiamValue.setText("- " + df.format(0));
+        capNhatTienThoi();
+    }
+
+    private double getTongCong() {
+        double vat = tongTien * 0.08;
+        return tongTien + vat;
     }
 
     private void capNhatSTT() {
