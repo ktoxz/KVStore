@@ -21,12 +21,12 @@ public class DAO_KhachHang {
 			Statement statement = con.createStatement();
 			ResultSet rs = statement.executeQuery(sql);
 			while(rs.next()) {
-				String maKH = rs.getString(1);
-				String tenKH = rs.getString(2);
-				boolean gioiTinh = rs.getBoolean(3);
-				String sdt = rs.getString(4);
-				LocalDate ngayTao = rs.getDate(5).toLocalDate();
-				int diemTichLuy = rs.getInt(6);
+				String maKH = rs.getString(1);      // maKH
+				String tenKH = rs.getString(2);     // tenKH
+				boolean gioiTinh = rs.getBoolean(3); // gioiTinh
+				String sdt = rs.getString(4);       // sdt
+				LocalDate ngayTao = rs.getDate(5).toLocalDate(); // ngayTaoTK
+				int diemTichLuy = rs.getInt(6);     // diemTichLuy
 				KhachHang kh = new KhachHang(maKH, tenKH, gioiTinh, sdt, ngayTao, diemTichLuy);
 				dskh.add(kh);
 			}
@@ -121,12 +121,12 @@ public class DAO_KhachHang {
 	        rs = stmt.executeQuery();
 	        if (rs.next()) {
 	            kh = new KhachHang(
-	                rs.getString(1),          
-	                rs.getString(2),           
-	                rs.getBoolean(3),         
-	                rs.getString(4),
-	                rs.getDate(5).toLocalDate(),
-	                rs.getInt(6)               
+	                rs.getString(1),          // maKH
+	                rs.getString(2),          // tenKH
+	                rs.getBoolean(3),         // gioiTinh
+	                rs.getString(4),          // sdt
+	                rs.getDate(5).toLocalDate(), // ngayTaoTK
+	                rs.getInt(6)              // diemTichLuy
 	            );
 	        }
 	    } catch (SQLException e) {
@@ -140,6 +140,105 @@ public class DAO_KhachHang {
 	        }
 	    }
 	    return kh; 
+	}
+	
+	/**
+	 * Cập nhật điểm tích lũy cho khách hàng
+	 * @param maKH Mã khách hàng
+	 * @param diemMoi Số điểm tích lũy mới
+	 * @return true nếu cập nhật thành công, false nếu thất bại
+	 */
+	public boolean capNhatDiemTichLuy(String maKH, int diemMoi) {
+		ConnectDB.getInstance();
+		Connection con = ConnectDB.getCon();
+		PreparedStatement stmt = null;
+		int n = 0;
+		try {
+			stmt = con.prepareStatement("UPDATE KhachHang SET diemTichLuy=? WHERE maKH=?");
+			stmt.setInt(1, diemMoi);
+			stmt.setString(2, maKH);
+			n = stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (stmt != null) stmt.close();
+			} catch (SQLException e2) {
+				e2.printStackTrace();
+			}
+		}
+		return n > 0;
+	}
+	
+	/**
+	 * Thêm điểm tích lũy cho khách hàng dựa trên tổng tiền mua hàng
+	 * Quy tắc: Cứ 10 điểm tích lũy = 1,000 VNĐ
+	 * @param maKH Mã khách hàng
+	 * @param tongTien Tổng tiền thanh toán
+	 * @return true nếu cập nhật thành công, false nếu thất bại
+	 */
+	public boolean themDiemTichLuy(String maKH, double tongTien) {
+		ConnectDB.getInstance();
+		Connection con = ConnectDB.getCon();
+		PreparedStatement stmt = null;
+		int n = 0;
+		try {
+			// Tính điểm tích lũy: Cứ 1,000 VNĐ = 10 điểm
+			int diemThem = (int)(tongTien / 1000) * 10;
+			
+			stmt = con.prepareStatement("UPDATE KhachHang SET diemTichLuy = diemTichLuy + ? WHERE maKH = ?");
+			stmt.setInt(1, diemThem);
+			stmt.setString(2, maKH);
+			n = stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (stmt != null) stmt.close();
+			} catch (SQLException e2) {
+				e2.printStackTrace();
+			}
+		}
+		return n > 0;
+	}
+	
+	/**
+	 * Trừ điểm tích lũy khi khách hàng sử dụng
+	 * @param maKH Mã khách hàng
+	 * @param diemTru Số điểm cần trừ
+	 * @return true nếu trừ thành công, false nếu thất bại hoặc không đủ điểm
+	 */
+	public boolean truDiemTichLuy(String maKH, int diemTru) {
+		ConnectDB.getInstance();
+		Connection con = ConnectDB.getCon();
+		PreparedStatement stmt = null;
+		int n = 0;
+		try {
+			// Kiểm tra số điểm hiện tại trước
+			stmt = con.prepareStatement("SELECT diemTichLuy FROM KhachHang WHERE maKH = ?");
+			stmt.setString(1, maKH);
+			ResultSet rs = stmt.executeQuery();
+			
+			if (rs.next()) {
+				int diemHienTai = rs.getInt(1);
+				if (diemHienTai >= diemTru) {
+					// Đủ điểm, thực hiện trừ
+					stmt = con.prepareStatement("UPDATE KhachHang SET diemTichLuy = diemTichLuy - ? WHERE maKH = ?");
+					stmt.setInt(1, diemTru);
+					stmt.setString(2, maKH);
+					n = stmt.executeUpdate();
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (stmt != null) stmt.close();
+			} catch (SQLException e2) {
+				e2.printStackTrace();
+			}
+		}
+		return n > 0;
 	}
 
 	

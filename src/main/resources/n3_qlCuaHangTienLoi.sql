@@ -1,107 +1,133 @@
-﻿-- Tạo database
+﻿-- ============================================
+--  DATABASE: n3_qlCuaHangTienLoi
+-- ============================================
 CREATE DATABASE n3_qlCuaHangTienLoi;
 GO
-
 USE n3_qlCuaHangTienLoi;
 GO
 
+-- ============================================
+-- 1. BẢNG KHÁCH HÀNG
+-- ============================================
 CREATE TABLE KhachHang (
-    maKH NVARCHAR(10) PRIMARY KEY,
-    tenKH NVARCHAR(100),
-    gioiTinh BIT,
-    sdt NVARCHAR(10),
-    ngayTaoTK DATE,
-    diemTichLuy INT DEFAULT 0
+                           maKH NVARCHAR(10) PRIMARY KEY,
+                           tenKH NVARCHAR(100),
+                           gioiTinh BIT,
+                           sdt NVARCHAR(15) UNIQUE ,
+                           ngayTaoTK DATE DEFAULT GETDATE(),
+                           diemTichLuy INT DEFAULT 0
 );
 
--- Bảng ChucVu (chuẩn theo UML)
+-- ============================================
+-- 2. BẢNG CHỨC VỤ
+-- ============================================
 CREATE TABLE ChucVu (
-    chucVu NVARCHAR(20) PRIMARY KEY
+                        chucVu NVARCHAR(20) PRIMARY KEY
 );
 
--- Dữ liệu mẫu
 INSERT INTO ChucVu VALUES
-(N'QUANLY'),
-(N'THUNGAN');
+                       (N'QUANLY'),
+                       (N'THUNGAN');
 
+-- ============================================
+-- 3. BẢNG NHÂN VIÊN
+-- ============================================
 CREATE TABLE NhanVien (
-    maNV NVARCHAR(20) PRIMARY KEY,
-    tenNV NVARCHAR(100),
-    matKhau NVARCHAR(100),
-    gioiTinh BIT,
-    email NVARCHAR(100),
-    sdt NVARCHAR(15),
-    ngayTaoTaiKhoan DATE,
-    chucVu NVARCHAR(20),
-    FOREIGN KEY (chucVu) REFERENCES ChucVu(chucVu)
+                          maNV NVARCHAR(20) PRIMARY KEY,
+                          tenNV NVARCHAR(100),
+                          matKhau NVARCHAR(100),
+                          gioiTinh BIT,
+                          email NVARCHAR(100),
+                          sdt NVARCHAR(15),
+                          ngayTaoTaiKhoan DATE DEFAULT GETDATE(),
+                          chucVu NVARCHAR(20),
+                          FOREIGN KEY (chucVu) REFERENCES ChucVu(chucVu)
 );
 
-
+-- ============================================
+-- 4. BẢNG LOẠI SẢN PHẨM
+-- ============================================
 CREATE TABLE LoaiSanPham (
-    loaiSP NVARCHAR(30) PRIMARY KEY
+                             loaiSP NVARCHAR(30) PRIMARY KEY
 );
 
 INSERT INTO LoaiSanPham VALUES
-(N'DoAn'),
-(N'NuocUong'),
-(N'VatDungSinhHoat'),
-(N'DoDungVPPHam'),
-(N'ThucPhamDongLanh');
+                            (N'DoAn'),
+                            (N'NuocUong'),
+                            (N'VatDungSinhHoat'),
+                            (N'DoDungVPPHam'),
+                            (N'ThucPhamDongLanh');
 
+-- ============================================
+-- 5. BẢNG SẢN PHẨM
+-- ============================================
 CREATE TABLE SanPham (
-    maSP NVARCHAR(20) PRIMARY KEY,
-    tenSP NVARCHAR(100),
-    giaSP FLOAT CHECK (giaSP >= 0),
-    hinhAnhSP NVARCHAR(255), -- này khum bt
-    moTaSP NVARCHAR(255),
-    tinhTrangSP BIT,
-    loaiSP NVARCHAR(30),
-    FOREIGN KEY (loaiSP) REFERENCES LoaiSanPham(loaiSP)
+                         maSP NVARCHAR(20) PRIMARY KEY,
+                         tenSP NVARCHAR(100),
+                         giaSP FLOAT CHECK (giaSP >= 0),
+                         hinhAnhSP NVARCHAR(255),
+                         moTaSP NVARCHAR(255),
+                         tinhTrangSP BIT DEFAULT 1,
+                         loaiSP NVARCHAR(30),
+                         FOREIGN KEY (loaiSP) REFERENCES LoaiSanPham(loaiSP)
 );
 
+-- ============================================
+-- 6. BẢNG LOẠI KHUYẾN MÃI
+-- ============================================
 CREATE TABLE LoaiKM (
-    loaiKM NVARCHAR(50) PRIMARY KEY
+                        loaiKM NVARCHAR(50) PRIMARY KEY
 );
 
--- Dữ liệu mẫu cho loại khuyến mãi
 INSERT INTO LoaiKM VALUES
-(N'GiamGiaPhanTramSP'),
-(N'GiamGiaTienSP'),
-(N'GiamGiaPhanTramSLSP'),
-(N'GiamGiaTienSLSP'),
-(N'TangSPKhiDuTien'),
-(N'GiamGiaPhanTramSPDuTien'),
-(N'GiamGiaTienSPDuTien'),
-(N'GiamGiaPhanTramHDDuTien');
+                       (N'GiamGiaPhanTramSP'),
+                       (N'GiamGiaTienSP'),
+                       (N'GiamGiaPhanTramSLSP'),
+                       (N'GiamGiaTienSLSP'),
+                       (N'TangSPKhiDuTien'),
+                       (N'GiamGiaPhanTramSPDuTien'),
+                       (N'GiamGiaTienSPDuTien'),
+                       (N'GiamGiaPhanTramHDDuTien');
 
+-- ============================================
+-- 7. BẢNG KHUYẾN MÃI
+-- ============================================
 CREATE TABLE KhuyenMai (
-    maKM INT IDENTITY(1,1) PRIMARY KEY, 
-    tenKM NVARCHAR(100),
-    moTaKM NVARCHAR(255),
-    ngayBatDau DATE,
-    ngayKetThuc DATE,
-    loaiKM NVARCHAR(50),
-    FOREIGN KEY (loaiKM) REFERENCES LoaiKM(loaiKM)
+                           maKM INT IDENTITY(1,1) PRIMARY KEY,
+                           tenKM NVARCHAR(100),
+                           moTaKM NVARCHAR(255),
+                           ngayBatDau DATE,
+                           ngayKetThuc DATE,
+                           loaiKM NVARCHAR(50),
+                           FOREIGN KEY (loaiKM) REFERENCES LoaiKM(loaiKM)
 );
 
+-- ============================================
+-- 8. BẢNG HÓA ĐƠN
+-- ============================================
 CREATE TABLE HoaDon (
-    maHoaDon NVARCHAR(20) PRIMARY KEY,
-    ngayGiaoDich DATE,
-    thongTinChung NVARCHAR(255),
-    tienKhach FLOAT CHECK (tienKhach >= 0),
-    thue FLOAT CHECK (thue >= 0),
-    -- khúc này chưa hiểu lắm
-    maKH NVARCHAR(20),
-    maNV NVARCHAR(20),
-    FOREIGN KEY (maKH) REFERENCES KhachHang(maKH),
-    FOREIGN KEY (maNV) REFERENCES NhanVien(maNV)
+                        maHoaDon NVARCHAR(20) PRIMARY KEY,
+                        ngayGiaoDich DATE DEFAULT GETDATE(),
+                        thongTinChung NVARCHAR(255),
+                        tienKhach FLOAT CHECK (tienKhach >= 0),
+                        thue FLOAT CHECK (thue >= 0),
+                        maKH NVARCHAR(10),
+                        maNV NVARCHAR(20),
+                        maKM INT NULL,  -- hóa đơn có thể hoặc không có khuyến mãi
+                        FOREIGN KEY (maKH) REFERENCES KhachHang(maKH),
+                        FOREIGN KEY (maNV) REFERENCES NhanVien(maNV),
+                        FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM)
 );
 
+-- ============================================
+-- 9. BẢNG CHI TIẾT HÓA ĐƠN
+-- ============================================
 CREATE TABLE CT_HoaDon (
-    maHoaDon NVARCHAR(20),
-    maSP NVARCHAR(20),
-    soLuong INT CHECK (soLuong > 0),
-    PRIMARY KEY (maHoaDon, maSP),
-    FOREIGN KEY (maHoaDon) REFERENCES HoaDon(maHoaDon) ON DELETE CASCADE,
-    FOREIGN KEY (maSP) REFERENCES SanPham(maSP)
+                           maHoaDon NVARCHAR(20),
+                           maSP NVARCHAR(20),
+                           soLuong INT CHECK (soLuong > 0),
+                           PRIMARY KEY (maHoaDon, maSP),
+                           FOREIGN KEY (maHoaDon) REFERENCES HoaDon(maHoaDon) ON DELETE CASCADE,
+                           FOREIGN KEY (maSP) REFERENCES SanPham(maSP)
 );
+GO
