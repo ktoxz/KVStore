@@ -34,13 +34,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
     private DAO_KhachHang kh_dao;
 
     public TAB_KhachHang() {
-    	// Khởi tạo kết nối đến CSDL
-    	try {
-			ConnectDB.getInstance().connect();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-    	
+
     	kh_dao = new DAO_KhachHang();
     	
     	setLayout(new BorderLayout(10, 10));

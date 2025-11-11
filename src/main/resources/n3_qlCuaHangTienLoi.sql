@@ -7,10 +7,11 @@ GO
 
 CREATE TABLE KhachHang (
     maKH NVARCHAR(10) PRIMARY KEY,
-    sdt NVARCHAR(10),
     tenKH NVARCHAR(100),
-    diemTichLuy INT DEFAULT 0,
-    ngayTaoTK DATE
+    gioiTinh BIT,
+    sdt NVARCHAR(10),
+    ngayTaoTK DATE,
+    diemTichLuy INT DEFAULT 0
 );
 
 -- Bảng ChucVu (chuẩn theo UML)
