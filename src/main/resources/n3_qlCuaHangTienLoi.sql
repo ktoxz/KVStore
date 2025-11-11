@@ -13,7 +13,7 @@ CREATE TABLE KhachHang (
                            maKH NVARCHAR(10) PRIMARY KEY,
                            tenKH NVARCHAR(100),
                            gioiTinh BIT,
-                           sdt NVARCHAR(15),
+                           sdt NVARCHAR(15) UNIQUE ,
                            ngayTaoTK DATE DEFAULT GETDATE(),
                            diemTichLuy INT DEFAULT 0
 );
