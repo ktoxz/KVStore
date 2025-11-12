@@ -1,5 +1,7 @@
 package com.entity;
 
+import com.dao.DAO_KhachHang;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,12 +9,10 @@ import java.util.List;
 public class HoaDon {
     private String maHoaDon;
     private LocalDate ngayGiaoDich;
-    private String thongTinChung;
     private double tienKhach;
     private double thue;
-    private String maKH;
-    private String maNV;
-    private Integer maKM; // Nullable
+    private KhachHang khachHang; // Thông tin khách hàng
+    private NhanVien nhanVien;
 
     // Danh sách chi tiết hóa đơn
     private List<CT_HoaDon> chiTietList = new ArrayList<>();
@@ -20,16 +20,13 @@ public class HoaDon {
     public HoaDon() {
     }
 
-    public HoaDon(String maHoaDon, LocalDate ngayGiaoDich, String thongTinChung,
-                  double tienKhach, double thue, String maKH, String maNV, Integer maKM) {
+    public HoaDon(String maHoaDon, LocalDate ngayGiaoDich, double tienKhach, double thue, KhachHang khachHang, NhanVien nhanVien) {
         this.maHoaDon = maHoaDon;
         this.ngayGiaoDich = ngayGiaoDich;
-        this.thongTinChung = thongTinChung;
         this.tienKhach = tienKhach;
         this.thue = thue;
-        this.maKH = maKH;
-        this.maNV = maNV;
-        this.maKM = maKM;
+        this.khachHang = khachHang;
+        this.nhanVien = nhanVien;
     }
 
     public String getMaHoaDon() {
@@ -48,13 +45,6 @@ public class HoaDon {
         this.ngayGiaoDich = ngayGiaoDich;
     }
 
-    public String getThongTinChung() {
-        return thongTinChung;
-    }
-
-    public void setThongTinChung(String thongTinChung) {
-        this.thongTinChung = thongTinChung;
-    }
 
     public double getTienKhach() {
         return tienKhach;
@@ -72,28 +62,25 @@ public class HoaDon {
         this.thue = thue;
     }
 
-    public String getMaKH() {
-        return maKH;
+    public KhachHang getKhachHang() {
+        return khachHang;
     }
 
-    public void setMaKH(String maKH) {
-        this.maKH = maKH;
+    public void setKhachHang(KhachHang khachHang) {
+        this.khachHang = khachHang;
     }
 
-    public String getMaNV() {
-        return maNV;
+    public void setKhachHang(String maKH) {
+        DAO_KhachHang dao_KhachHang = new DAO_KhachHang();
+        this.khachHang = new KhachHang();
     }
 
-    public void setMaNV(String maNV) {
-        this.maNV = maNV;
+    public NhanVien getNhanVien() {
+        return nhanVien;
     }
 
-    public Integer getMaKM() {
-        return maKM;
-    }
-
-    public void setMaKM(Integer maKM) {
-        this.maKM = maKM;
+    public void setNhanVien(NhanVien nhanVien) {
+        this.nhanVien = nhanVien;
     }
 
     public List<CT_HoaDon> getChiTietList() {
@@ -110,9 +97,15 @@ public class HoaDon {
 
     @Override
     public String toString() {
-        return "HoaDon [maHoaDon=" + maHoaDon + ", ngayGiaoDich=" + ngayGiaoDich + ", thongTinChung="
-                + thongTinChung + ", tienKhach=" + tienKhach + ", thue=" + thue + ", maKH=" + maKH + ", maNV=" + maNV
-                + ", maKM=" + maKM + "]";
+        return "HoaDon{" +
+                "maHoaDon='" + maHoaDon + '\'' +
+                ", ngayGiaoDich=" + ngayGiaoDich +
+                ", tienKhach=" + tienKhach +
+                ", thue=" + thue +
+                ", khachHang=" + khachHang +
+                ", nhanVien=" + nhanVien +
+                ", chiTietList=" + chiTietList +
+                '}';
     }
 }
 

@@ -2,22 +2,22 @@ package com;
 
 import com.connectDB.ConnectDB;
 import com.dao.DAO_SanPham;
+import com.dao.DAO_CT_KhuyenMai;
 import com.entity.SanPham;
+import com.entity.CT_KhuyenMai;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.gui.GUI_Login;
 
 import javax.swing.*;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        // Connect to the database first
         try {
             ConnectDB.getInstance().connect();
+            System.out.println("✅ Kết nối CSDL thành công!");
         } catch (SQLException ex) {
-            // Show a dialog and print stack trace; continue to show GUI even if DB fails
             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
                     "Failed to connect to database: " + ex.getMessage(),
                     "DB Connection Error",
@@ -25,27 +25,48 @@ public class Main {
             ex.printStackTrace();
         }
 
-        // Ensure DB disconnects when the app exits
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 ConnectDB.getInstance().disconnect();
-            } catch (Exception ignored) {
-            }
+                System.out.println("🔌 Đã ngắt kết nối CSDL.");
+            } catch (Exception ignored) {}
         }));
 
-        // Set Look and Feel
         try {
             UIManager.setLookAndFeel(new FlatMacLightLaf());
-        } catch (Exception ignored) {
+        } catch (Exception ignored) {}
+
+        try {
+            DAO_SanPham daoSP = new DAO_SanPham();
+            DAO_CT_KhuyenMai daoKM = new DAO_CT_KhuyenMai();
+
+            List<SanPham> sps = daoSP.getAllSanPham();
+
+            System.out.println("=== 🛒 Danh sách sản phẩm có khuyến mãi ===");
+            for (SanPham sp : sps) {
+                try {
+                    List<CT_KhuyenMai> kms = daoKM.findBySanPham(sp.getMaSP());
+                    if (!kms.isEmpty()) {
+                        System.out.println("➡️ " + sp.getMaSP() + " - " + sp.getTenSP());
+                        for (CT_KhuyenMai km : kms) {
+                            System.out.printf("   • KM: %-25s | Loại: %-20s | Giá trị: %.2f%n",
+                                    km.getKhuyenMai().getTenKM(),
+                                    km.getLoaiKM(),
+                                    km.getGiaTri());
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.err.println("⚠️ Lỗi khi truy vấn KM cho SP " + sp.getMaSP() + ": " + e.getMessage());
+                }
+            }
+            System.out.println("==========================================");
+
+        } catch (Exception e) {
+            System.err.println("⚠️ Lỗi debug khuyến mãi: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        DAO_SanPham daoSanPham = new DAO_SanPham();
-        List<SanPham> sps = daoSanPham.getAllSanPham();
-        for(SanPham sp: sps) {
-            System.out.println(sp);
-        }
-
-        // Launch GUI on Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("KVStore - Đăng nhập");
             GUI_Login loginPanel = new GUI_Login();

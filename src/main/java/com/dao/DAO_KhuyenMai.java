@@ -12,9 +12,8 @@ import java.util.List;
 
 public class DAO_KhuyenMai {
 
-    // Lấy connection đang mở từ ConnectDB (KHÔNG để trong try-with-resources)
     private Connection con() throws SQLException {
-        return ConnectDB.getInstance().getCon(); // getCon() nên tự reconnect nếu bị closed
+        return ConnectDB.getInstance().getCon();
     }
 
     // ======= Loại khuyến mãi =======
@@ -31,7 +30,7 @@ public class DAO_KhuyenMai {
     // ======= Khuyến mãi =======
     public List<KhuyenMai> findAll() throws SQLException {
         String sql = """
-            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc, loaiKM
+            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc
             FROM KhuyenMai
             ORDER BY maKM
         """;
@@ -48,12 +47,11 @@ public class DAO_KhuyenMai {
     public List<KhuyenMai> search(String kw) throws SQLException {
         String k = "%" + (kw == null ? "" : kw.trim()) + "%";
         String sql = """
-            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc, loaiKM
+            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc
             FROM KhuyenMai
             WHERE CAST(maKM AS NVARCHAR) LIKE ?
                OR tenKM LIKE ?
                OR moTaKM LIKE ?
-               OR loaiKM LIKE ?
             ORDER BY maKM
         """;
         List<KhuyenMai> list = new ArrayList<>();
@@ -61,7 +59,6 @@ public class DAO_KhuyenMai {
             ps.setString(1, k);
             ps.setString(2, k);
             ps.setString(3, k);
-            ps.setString(4, k);
             try (ResultSet r = ps.executeQuery()) {
                 while (r.next()) list.add(mapRow(r));
             }
@@ -71,7 +68,7 @@ public class DAO_KhuyenMai {
 
     public KhuyenMai findById(int maKM) throws SQLException {
         String sql = """
-            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc, loaiKM
+            SELECT maKM, tenKM, moTaKM, ngayBatDau, ngayKetThuc
             FROM KhuyenMai
             WHERE maKM = ?
         """;
@@ -85,16 +82,15 @@ public class DAO_KhuyenMai {
 
     public int insert(KhuyenMai km) throws SQLException {
         String sql = """
-            INSERT INTO KhuyenMai(tenKM, moTaKM, ngayBatDau, ngayKetThuc, loaiKM)
+            INSERT INTO KhuyenMai(tenKM, moTaKM, ngayBatDau, ngayKetThuc)
             OUTPUT INSERTED.maKM
-            VALUES(?,?,?,?,?)
+            VALUES(?,?,?,?)
         """;
         try (PreparedStatement ps = con().prepareStatement(sql)) {
             ps.setString(1, km.getTenKM());
             ps.setString(2, km.getMoTaKM());
             ps.setDate(3, km.getNgayBatDau());
             ps.setDate(4, km.getNgayKetThuc());
-            ps.setString(5, km.getLoaiKM());
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : -1;
             }
@@ -104,7 +100,7 @@ public class DAO_KhuyenMai {
     public int update(KhuyenMai km) throws SQLException {
         String sql = """
             UPDATE KhuyenMai
-               SET tenKM = ?, moTaKM = ?, ngayBatDau = ?, ngayKetThuc = ?, loaiKM = ?
+               SET tenKM = ?, moTaKM = ?, ngayBatDau = ?, ngayKetThuc = ?
              WHERE maKM = ?
         """;
         try (PreparedStatement ps = con().prepareStatement(sql)) {
@@ -112,8 +108,7 @@ public class DAO_KhuyenMai {
             ps.setString(2, km.getMoTaKM());
             ps.setDate(3, km.getNgayBatDau());
             ps.setDate(4, km.getNgayKetThuc());
-            ps.setString(5, km.getLoaiKM());
-            ps.setInt(6, km.getMaKM());
+            ps.setInt(5, km.getMaKM());
             return ps.executeUpdate();
         }
     }
@@ -133,8 +128,7 @@ public class DAO_KhuyenMai {
             r.getString("tenKM"),
             r.getString("moTaKM"),
             r.getDate("ngayBatDau"),
-            r.getDate("ngayKetThuc"),
-            r.getString("loaiKM")
+            r.getDate("ngayKetThuc")
         );
     }
 }

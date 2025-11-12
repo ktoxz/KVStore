@@ -24,13 +24,12 @@ public class PDFExportService {
      * @param hoaDon Đối tượng hóa đơn
      * @param khachHang Thông tin khách hàng
      * @param tenNhanVien Tên nhân viên
-     * @param soLanXuatHD Số lần xuất hóa đơn của khách hàng
      * @param tienGiamTuDiem Số tiền giảm từ điểm tích lũy
      * @param diemDaSuDung Số điểm đã sử dụng
      * @return Đường dẫn file PDF đã tạo
      */
     public static String xuatHoaDonPDF(HoaDon hoaDon, KhachHang khachHang, String tenNhanVien,
-                                       int soLanXuatHD, double tienGiamTuDiem, int diemDaSuDung) {
+                                       double tienGiamTuDiem, int diemDaSuDung) {
         try {
             // Tạo thư mục HoaDon nếu chưa có
             File hoaDonDir = new File("HoaDon");
@@ -42,7 +41,7 @@ public class PDFExportService {
             String fileName = "HoaDon/HD_" + hoaDon.getMaHoaDon() + ".pdf";
 
             // Tạo HTML content
-            String htmlContent = generateHTML(hoaDon, khachHang, tenNhanVien, soLanXuatHD, tienGiamTuDiem, diemDaSuDung);
+            String htmlContent = generateHTML(hoaDon, khachHang, tenNhanVien, tienGiamTuDiem, diemDaSuDung);
 
             // Xuất PDF
             OutputStream os = new FileOutputStream(fileName);
@@ -89,7 +88,7 @@ public class PDFExportService {
      * Tạo HTML content cho hóa đơn
      */
     private static String generateHTML(HoaDon hoaDon, KhachHang khachHang, String tenNhanVien,
-                                       int soLanXuatHD, double tienGiamTuDiem, int diemDaSuDung) {
+                                       double tienGiamTuDiem, int diemDaSuDung) {
         StringBuilder html = new StringBuilder();
 
         // Tính toán các giá trị
@@ -154,12 +153,8 @@ public class PDFExportService {
 
         if (khachHang != null) {
             html.append("<div class='info-row'><strong>Số điện thoại:</strong> " + khachHang.getSdt() + "</div>");
-            html.append("<div class='info-row'><strong>Số lần mua hàng:</strong> " + soLanXuatHD + " lần</div>");
         }
 
-        if (hoaDon.getThongTinChung() != null && !hoaDon.getThongTinChung().trim().isEmpty()) {
-            html.append("<div class='info-row'><strong>Ghi chú:</strong> " + hoaDon.getThongTinChung() + "</div>");
-        }
         html.append("</div>");
 
         // Bảng sản phẩm
@@ -177,12 +172,30 @@ public class PDFExportService {
 
         int stt = 1;
         for (CT_HoaDon ct : hoaDon.getChiTietList()) {
+            double donGiaSau = ct.getGiaSP(); // giá sau khuyến mãi (đã lưu)
+            double donGiaGoc = (ct.getSanPham() != null ? ct.getSanPham().getGiaSP() : donGiaSau);
+            int sl = ct.getSoLuong();
+            double thanhTienSau = sl * donGiaSau;
+            double thanhTienGoc = sl * donGiaGoc;
+            boolean coGiamGia = thanhTienSau < thanhTienGoc - 0.001;
+
             html.append("<tr>");
             html.append("<td class='text-center'>" + stt++ + "</td>");
             html.append("<td>" + ct.getTenSP() + "</td>");
-            html.append("<td class='text-center'>" + ct.getSoLuong() + "</td>");
-            html.append("<td class='text-right'>" + df.format(ct.getGiaSP()) + "đ</td>");
-            html.append("<td class='text-right'>" + df.format(ct.getThanhTien()) + "đ</td>");
+            html.append("<td class='text-center'>" + sl + "</td>");
+
+            // Đơn giá: chỉ hiển thị giá sau khuyến mãi (không gạch)
+            html.append("<td class='text-right'>" + df.format(donGiaSau) + "đ</td>");
+
+            // Thành tiền: gạch tổng gốc nếu có giảm
+            if (coGiamGia) {
+                html.append("<td class='text-right'>" +
+                        "<div style='font-size:13px; color:#6c757d; text-decoration: line-through;'>" + df.format(thanhTienGoc) + "đ</div>" +
+                        "<div style='font-size:13px; color:#e74c3c; font-weight:bold;'>" + df.format(thanhTienSau) + "đ</div>" +
+                        "</td>");
+            } else {
+                html.append("<td class='text-right'>" + df.format(thanhTienSau) + "đ</td>");
+            }
             html.append("</tr>");
         }
 

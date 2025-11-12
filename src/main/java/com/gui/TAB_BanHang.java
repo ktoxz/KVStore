@@ -3,17 +3,20 @@ package com.gui;
 import com.dao.DAO_SanPham;
 import com.dao.DAO_KhachHang;
 import com.dao.DAO_HoaDon;
-import com.dao.DAO_Staff;
-import com.entity.SanPham;
-import com.entity.KhachHang;
-import com.entity.HoaDon;
-import com.entity.CT_HoaDon;
+import com.dao.DAO_NhanVien;
+import com.dao.DAO_CT_KhuyenMai; // added
+import com.entity.*;
+import com.enums.LoaiKM; // added
 import com.service.PDFExportService;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.text.AbstractDocument; // added
+import javax.swing.text.AttributeSet; // added
+import javax.swing.text.BadLocationException; // added
+import javax.swing.text.DocumentFilter; // added
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
@@ -48,7 +51,8 @@ public class TAB_BanHang extends JPanel {
     private DAO_SanPham daoSP = new DAO_SanPham();
     private DAO_KhachHang daoKH = new DAO_KhachHang();
     private DAO_HoaDon daoHD = new DAO_HoaDon();
-    private DAO_Staff daoStaff = new DAO_Staff();
+    private DAO_NhanVien daoStaff = new DAO_NhanVien();
+    private DAO_CT_KhuyenMai daoCTKM = new DAO_CT_KhuyenMai(); // added
     private JPopupMenu popupSearch; // Di chuyển ra ngoài để tái sử dụng
     
     // Customer info fields
@@ -205,15 +209,64 @@ public class TAB_BanHang extends JPanel {
             }
         };
 
-        table = new JTable(mdlTable);
-        table.setRowHeight(30);
+        // Tạo JTable với zebra striping và selection màu nhẹ
+        table = new JTable(mdlTable) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                // Không can thiệp màu nền của cột nút X (để giữ nút đỏ)
+                if (column == 6) return c;
+                Color zebraOdd = new Color(248, 249, 252);
+                Color zebraEven = Color.WHITE;
+                Color selectedBg = new Color(233, 236, 239); // xám nhạt, thay thế xanh dương
+                if (isRowSelected(row)) {
+                    c.setBackground(selectedBg);
+                } else {
+                    c.setBackground((row % 2 == 0) ? zebraEven : zebraOdd);
+                }
+                return c;
+            }
+        };
+        // Màu chọn (nếu renderer sử dụng selectionBackground)
+        table.setSelectionBackground(new Color(233, 236, 239));
+        table.setSelectionForeground(Color.BLACK);
+        table.setShowGrid(true);
+        table.setGridColor(new Color(230,230,230));
+
+        // Tăng chiều cao dòng để hiển thị 2 dòng (giá gốc + giá sau KM) không bị cắt chữ
+        int baseH = table.getFontMetrics(new Font("Segoe UI", Font.PLAIN, 14)).getHeight();
+        table.setRowHeight(baseH * 2 + 8);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
         table.getTableHeader().setReorderingAllowed(false);
 
+        // Điều chỉnh độ rộng các cột cho gọn gàng
+        table.getColumnModel().getColumn(0).setPreferredWidth(48); // STT
+        table.getColumnModel().getColumn(0).setMaxWidth(60);
+        table.getColumnModel().getColumn(1).setPreferredWidth(90); // Mã SP
+        table.getColumnModel().getColumn(3).setPreferredWidth(80); // Số lượng
+        table.getColumnModel().getColumn(3).setMaxWidth(90);
+        table.getColumnModel().getColumn(4).setPreferredWidth(120); // Đơn giá
+        table.getColumnModel().getColumn(5).setPreferredWidth(130); // Thành tiền
+        table.getColumnModel().getColumn(6).setPreferredWidth(68); // Nút X
+        table.getColumnModel().getColumn(6).setMaxWidth(80);
+
+        // Căn giữa STT và Số lượng
+        javax.swing.table.DefaultTableCellRenderer centerRenderer = new javax.swing.table.DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        table.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+        table.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+
         // Renderer cho nút X
         table.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
         table.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
+
+        // Renderer cho cột Đơn giá (hiển thị gạch giá cũ + giá sau KM)
+        table.getColumnModel().getColumn(4).setCellRenderer(new PriceRenderer());
+        // Renderer cho cột Thành tiền (hiển thị gạch nếu có KM + giá sau KM)
+        table.getColumnModel().getColumn(5).setCellRenderer(new TotalRenderer());
+        // Editor cho cột Số lượng: chỉ số, chọn hết khi focus để nhập nhanh
+        table.getColumnModel().getColumn(3).setCellEditor(new NumericCellEditor());
 
         // Lắng nghe thay đổi số lượng
         mdlTable.addTableModelListener(e -> {
@@ -231,10 +284,13 @@ public class TAB_BanHang extends JPanel {
                             mdlTable.setValueAt(1, row, 3);
                             qty = 1;
                         }
-                        String priceStr = mdlTable.getValueAt(row, 4).toString().replace(",", "").replace(".", "");
-                        double price = Double.parseDouble(priceStr);
-                        double thanhTien = qty * price;
+                        String maSP = mdlTable.getValueAt(row, 1).toString();
+                        SanPham sp = daoSP.findById(maSP);
+                        double donGiaKM = getDonGiaSauKhuyenMai(sp);
+                        double thanhTien = qty * donGiaKM;
+                        // cập nhật "Thành tiền"
                         mdlTable.setValueAt(df.format(thanhTien), row, 5);
+                        // cập nhật lại tổng
                         capNhatTongTien();
                     } catch (Exception ex) {
                         mdlTable.setValueAt(1, row, 3);
@@ -500,8 +556,7 @@ public class TAB_BanHang extends JPanel {
         pType.add(rbCash); pType.add(rbBank);
         gbc.gridx = 1; pnlTotal.add(pType, gbc);
 
-        // Tiền khách trả & tiền thối (đẩy xuống)
-        // Đổi y: 7 và 8
+        // Tiền khách trả & tiền thối (đẩy xuống y: 7 và 8)
         lblKhachTraRow = new JLabel("Tiền khách trả:");
         lblKhachTraRow.setFont(fLabel);
         lblTienThoiRow = new JLabel("Tiền thối:");
@@ -616,8 +671,8 @@ public class TAB_BanHang extends JPanel {
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
                     // Lấy mã nhân viên từ database
-                    String maNV = daoStaff.getFirstMaNV();
-                    if (maNV == null) {
+                    NhanVien nv = daoStaff.getFirstNV();
+                    if (nv == null) {
                         JOptionPane.showMessageDialog(this,
                             "Không tìm thấy nhân viên trong hệ thống!\nVui lòng thêm nhân viên trước khi thanh toán.",
                             "Lỗi",
@@ -630,13 +685,12 @@ public class TAB_BanHang extends JPanel {
                     HoaDon hoaDon = new HoaDon();
                     hoaDon.setMaHoaDon(maHD);
                     hoaDon.setNgayGiaoDich(LocalDate.now());
-                    hoaDon.setThongTinChung(txtNote.getText().trim());
                     hoaDon.setTienKhach(tienKhachTra);
                     hoaDon.setThue(tongTien * 0.08); // VAT 8%
 
                     // Nếu có khách hàng thì dùng mã khách hàng, không thì để mã khách vãng lai
                     if (currentCustomer != null) {
-                        hoaDon.setMaKH(currentCustomer.getMaKH());
+                        hoaDon.setKhachHang(currentCustomer);
                     } else {
                         // Tìm hoặc tạo khách vãng lai
                         KhachHang khachVangLai = daoKH.timKiemKH("0000000000");
@@ -645,21 +699,21 @@ public class TAB_BanHang extends JPanel {
                             khachVangLai = new KhachHang("KH00000000", "Khách vãng lai", true, "0000000000", LocalDate.now(), 0);
                             daoKH.themKH(khachVangLai);
                         }
-                        hoaDon.setMaKH("KH00000000");
+                        hoaDon.setKhachHang("KH00000000");
                     }
 
-                    hoaDon.setMaNV(maNV); // Sử dụng mã nhân viên từ database
-                    hoaDon.setMaKM(null); // Chưa có khuyến mãi
+                    hoaDon.setNhanVien(new DAO_NhanVien().getFirstNV()); // Sử dụng mã nhân viên từ database
 
                     // Thêm chi tiết hóa đơn
                     for (int i = 0; i < mdlTable.getRowCount(); i++) {
                         String maSP = mdlTable.getValueAt(i, 1).toString();
+                        SanPham sp = daoSP.findById(maSP);
                         String tenSP = mdlTable.getValueAt(i, 2).toString();
                         int soLuong = Integer.parseInt(mdlTable.getValueAt(i, 3).toString());
-                        String priceStr = mdlTable.getValueAt(i, 4).toString().replace(",", "").replace(".", "").trim();
-                        double giaSP = Double.parseDouble(priceStr);
+                        // Lấy giá sau KM để lưu vào hóa đơn
+                        double giaSP = getDonGiaSauKhuyenMai(sp);
 
-                        CT_HoaDon chiTiet = new CT_HoaDon(maHD, maSP, soLuong, tenSP, giaSP);
+                        CT_HoaDon chiTiet = new CT_HoaDon(maHD, sp, soLuong, tenSP, giaSP);
                         hoaDon.addChiTiet(chiTiet);
                     }
 
@@ -680,15 +734,11 @@ public class TAB_BanHang extends JPanel {
                             }
                         }
 
-                        // Lấy số lần xuất hóa đơn
-                        int soLanXuatHD = daoHD.getSoLanXuatHoaDon(hoaDon.getMaKH());
-
                         // Xuất PDF
                         String pdfPath = PDFExportService.xuatHoaDonPDF(
                             hoaDon,
                             currentCustomer,
                             tenNhanVien,
-                            soLanXuatHD,
                             tienGiamTuDiem,
                             diemDaSuDung
                         );
@@ -801,27 +851,42 @@ public class TAB_BanHang extends JPanel {
             if (mdlTable.getValueAt(i, 1).equals(sp.getMaSP())) {
                 int sl = Integer.parseInt(mdlTable.getValueAt(i, 3).toString()) + 1;
                 mdlTable.setValueAt(sl, i, 3);
-                double gia = sp.getGiaSP();
-                double thanhTien = sl * gia;
+                double donGiaKM = getDonGiaSauKhuyenMai(sp);
+                double thanhTien = sl * donGiaKM;
+                // cập nhật giá trị hiển thị và tính tiền
                 mdlTable.setValueAt(df.format(thanhTien), i, 5);
+                // lưu lại đơn giá sau KM ở cột 4 (để export/logic khác dùng nếu cần)
+                mdlTable.setValueAt(donGiaKM, i, 4);
                 capNhatTongTien();
+                // focus vào số lượng
+                requestFocusSoLuong(i);
                 return;
             }
         }
         // Thêm sản phẩm mới
         int stt = mdlTable.getRowCount() + 1;
-        mdlTable.addRow(new Object[]{stt, sp.getMaSP(), sp.getTenSP(), 1,
-                df.format(sp.getGiaSP()), df.format(sp.getGiaSP()), "X"});
+        int soLuong = 1;
+        double donGiaKM = getDonGiaSauKhuyenMai(sp);
+        double thanhTien = soLuong * donGiaKM;
+        mdlTable.addRow(new Object[]{stt, sp.getMaSP(), sp.getTenSP(), soLuong,
+                donGiaKM, df.format(thanhTien), "X"});
 
         capNhatTongTien();
 
         int lastRow = mdlTable.getRowCount() - 1;
+        requestFocusSoLuong(lastRow);
+    }
+
+    private void requestFocusSoLuong(int rowIndex) {
         table.requestFocus();
-        table.changeSelection(lastRow, 3, false, false); // chọn ô số lượng
-        table.editCellAt(lastRow, 3); // mở chế độ chỉnh sửa
+        table.changeSelection(rowIndex, 3, false, false); // chọn ô số lượng
+        table.editCellAt(rowIndex, 3); // mở chế độ chỉnh sửa
         Component editor = table.getEditorComponent();
         if (editor != null) {
             editor.requestFocusInWindow(); // đặt focus vào editor
+            if (editor instanceof JTextField tf) {
+                tf.selectAll(); // chọn hết để nhập nhanh số mới
+            }
         }
     }
 
@@ -829,22 +894,19 @@ public class TAB_BanHang extends JPanel {
         tongTien = 0;
         for (int i = 0; i < mdlTable.getRowCount(); i++) {
             try {
-                // Lấy giá trị từ cột "Thành tiền" và xóa dấu phân cách
-                String thanhTienStr = mdlTable.getValueAt(i, 5).toString().replace(",", "").replace(".", "").trim();
-                if (!thanhTienStr.isEmpty()) {
-                    double thanhTien = Double.parseDouble(thanhTienStr);
-                    tongTien += thanhTien;
-                }
-            } catch (Exception e) {
-                // Nếu có lỗi, tính lại từ số lượng và đơn giá
-                try {
-                    int qty = Integer.parseInt(mdlTable.getValueAt(i, 3).toString());
-                    String priceStr = mdlTable.getValueAt(i, 4).toString().replace(",", "").replace(".", "").trim();
-                    double price = Double.parseDouble(priceStr);
-                    tongTien += qty * price;
-                } catch (Exception ex) {
-                    // Bỏ qua hàng này nếu không thể tính
-                }
+                String maSP = mdlTable.getValueAt(i, 1).toString();
+                SanPham sp = daoSP.findById(maSP);
+                int qty = Integer.parseInt(mdlTable.getValueAt(i, 3).toString());
+                if (qty < 1) qty = 1;
+                double donGiaKM = getDonGiaSauKhuyenMai(sp);
+                double line = qty * donGiaKM;
+                tongTien += line;
+                // cập nhật lại cột Thành tiền để đúng theo KM
+                mdlTable.setValueAt(df.format(line), i, 5);
+                // đồng bộ lại cột đơn giá (dưới dạng số) để các nơi khác có thể dùng
+                mdlTable.setValueAt(donGiaKM, i, 4);
+            } catch (Exception ex) {
+                // Bỏ qua hàng lỗi
             }
         }
 
@@ -1141,8 +1203,134 @@ public class TAB_BanHang extends JPanel {
         double tongCong = getTongCong();
         double tienCanTra = tongCong - tienGiamTuDiem;
         double tienThoi = tienKhachTra - tienCanTra;
-        if (tienThoi < 0) tienThoi = 0;
+        if (tienThoi < 250) tienThoi = 0;
+        if (tienThoi > 750 && tienThoi < 1000) tienThoi = 1000;
         lblTienThoiValue.setText(df.format(tienThoi));
+    }
+
+    // Tính đơn giá sau khuyến mãi cho 1 sản phẩm (nếu có)
+    private double getDonGiaSauKhuyenMai(SanPham sp) {
+        if (sp == null) return 0;
+        double giaGoc = sp.getGiaSP();
+        try {
+            CT_KhuyenMai km = daoCTKM.findBestForProduct(sp.getMaSP());
+            if (km != null && km.getLoaiKM() != null) {
+                if (km.getLoaiKM() == LoaiKM.GiamGiaPhanTramSP) {
+                    giaGoc = giaGoc * (100.0 - km.getGiaTri()) / 100.0;
+                } else if (km.getLoaiKM() == LoaiKM.GiamGiaTienSP) {
+                    giaGoc = giaGoc - km.getGiaTri();
+                }
+                if (giaGoc < 0) giaGoc = 0;
+            }
+        } catch (Exception ignored) {}
+        return giaGoc;
+    }
+
+    // Renderer hiển thị giá cũ (gạch) + giá sau KM cho cột Đơn giá
+    class PriceRenderer extends JLabel implements TableCellRenderer {
+        public PriceRenderer() { setOpaque(true); }
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setBackground(isSelected ? table.getSelectionBackground() : Color.WHITE);
+            setForeground(isSelected ? table.getSelectionForeground() : Color.BLACK);
+            setFont(table.getFont()); // đồng bộ font với bảng
+            String maSP = table.getValueAt(row, 1).toString();
+            SanPham sp = daoSP.findById(maSP);
+            double giaGoc = sp != null ? sp.getGiaSP() : 0;
+            double giaSauKM = getDonGiaSauKhuyenMai(sp);
+            if (giaSauKM < giaGoc - 0.001) {
+                String html = "<html><div style='text-align:right; font-size:14px; line-height:14px; margin:0; padding:0;'>" +
+                        "<div style='color:#6c757d; text-decoration: line-through; margin:0; padding:0;'>" + df.format(giaGoc) + "đ</div>" +
+                        "<div style='color:#dc3545; font-weight:bold; margin:0; padding:0;'>" + df.format(giaSauKM) + "đ</div>" +
+                        "</div></html>";
+                setText(html);
+                setHorizontalAlignment(SwingConstants.RIGHT);
+            } else {
+                setText(df.format(giaGoc) + "đ");
+                setHorizontalAlignment(SwingConstants.RIGHT);
+                setForeground(new Color(33,37,41));
+            }
+            return this;
+        }
+    }
+
+    // Renderer hiển thị tổng tiền: gạch tổng gốc + hiển thị tổng sau KM khi có khuyến mãi
+    class TotalRenderer extends JLabel implements TableCellRenderer {
+        public TotalRenderer() { setOpaque(true); }
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setBackground(isSelected ? table.getSelectionBackground() : Color.WHITE);
+            setForeground(isSelected ? table.getSelectionForeground() : Color.BLACK);
+            setFont(table.getFont());
+            String maSP = table.getValueAt(row, 1).toString();
+            SanPham sp = daoSP.findById(maSP);
+            int qty = 1;
+            try { qty = Integer.parseInt(table.getValueAt(row, 3).toString()); } catch (Exception ignored) {}
+            double giaGoc = sp != null ? sp.getGiaSP() : 0;
+            double giaSauKM = getDonGiaSauKhuyenMai(sp);
+            double thanhTienGoc = qty * giaGoc;
+            double thanhTienSau = qty * giaSauKM;
+            if (giaSauKM < giaGoc - 0.001) {
+                String html = "<html><div style='text-align:right; font-size:14px; line-height:14px; margin:0; padding:0;'>" +
+                        "<div style='color:#6c757d; text-decoration: line-through; margin:0; padding:0;'>" + df.format(thanhTienGoc) + "đ</div>" +
+                        "<div style='color:#dc3545; font-weight:bold; margin:0; padding:0;'>" + df.format(thanhTienSau) + "đ</div>" +
+                        "</div></html>";
+                setText(html);
+            } else {
+                setText(df.format(thanhTienSau) + "đ");
+            }
+            setHorizontalAlignment(SwingConstants.RIGHT);
+            return this;
+        }
+    }
+
+    // Editor số lượng: chỉ cho số, chọn hết khi focus để nhập nhanh (2 -> thay 1 thành 2; 20 -> thành 20)
+    class NumericCellEditor extends DefaultCellEditor {
+        private final JTextField textField;
+        public NumericCellEditor() {
+            super(new JTextField());
+            textField = (JTextField) getComponent();
+            textField.setHorizontalAlignment(SwingConstants.CENTER);
+            textField.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            // Chỉ cho phép số
+            ((AbstractDocument) textField.getDocument()).setDocumentFilter(new DocumentFilter() {
+                @Override
+                public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                    if (string != null && string.matches("[0-9]+")) {
+                        super.insertString(fb, offset, string, attr);
+                    }
+                }
+                @Override
+                public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                    if (text != null && text.matches("[0-9]+")) {
+                        super.replace(fb, offset, length, text, attrs);
+                    } else if (text == null || text.isEmpty()) {
+                        super.replace(fb, offset, length, text, attrs);
+                    }
+                }
+            });
+            // Chọn hết khi focus để gõ là thay thế ngay
+            textField.addFocusListener(new FocusAdapter() {
+                @Override public void focusGained(FocusEvent e) { SwingUtilities.invokeLater(textField::selectAll); }
+            });
+        }
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            Component c = super.getTableCellEditorComponent(table, value, isSelected, row, column);
+            SwingUtilities.invokeLater(textField::selectAll);
+            return c;
+        }
+        @Override
+        public Object getCellEditorValue() {
+            String txt = textField.getText();
+            if (txt == null || txt.isEmpty()) return 1;
+            try {
+                int v = Integer.parseInt(txt);
+                return Math.max(1, v);
+            } catch (NumberFormatException e) {
+                return 1;
+            }
+        }
     }
 
     // Renderer cho cột X
@@ -1152,6 +1340,12 @@ public class TAB_BanHang extends JPanel {
             setText("X");
             setForeground(Color.WHITE);
             setBackground(new Color(220, 53, 69));
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setMargin(new Insets(2, 8, 2, 8));
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setToolTipText("Xóa sản phẩm khỏi giỏ hàng");
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         }
         public Component getTableCellRendererComponent(JTable table, Object value,
                                                        boolean isSelected, boolean hasFocus,
@@ -1168,6 +1362,12 @@ public class TAB_BanHang extends JPanel {
             button.setOpaque(true);
             button.setForeground(Color.WHITE);
             button.setBackground(new Color(220, 53, 69));
+            button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            button.setMargin(new Insets(2, 8, 2, 8));
+            button.setFocusPainted(false);
+            button.setBorderPainted(false);
+            button.setToolTipText("Xóa sản phẩm khỏi giỏ hàng");
+            button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             button.addActionListener(e -> {
                 mdlTable.removeRow(selectedRow);
                 capNhatSTT();

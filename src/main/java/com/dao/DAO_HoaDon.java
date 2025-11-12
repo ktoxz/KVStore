@@ -63,22 +63,15 @@ public class DAO_HoaDon {
             con.setAutoCommit(false);
 
             // Thêm hóa đơn
-            String sqlHD = "INSERT INTO HoaDon (maHoaDon, ngayGiaoDich, thongTinChung, tienKhach, thue, maKH, maNV, maKM) " +
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String sqlHD = "INSERT INTO HoaDon (maHoaDon, ngayGiaoDich, tienKhach, thue, maKH, maNV) " +
+                           "VALUES (?, ?, ?, ?, ?, ?)";
             stmtHD = con.prepareStatement(sqlHD);
             stmtHD.setString(1, hoaDon.getMaHoaDon());
             stmtHD.setDate(2, java.sql.Date.valueOf(hoaDon.getNgayGiaoDich()));
-            stmtHD.setString(3, hoaDon.getThongTinChung());
-            stmtHD.setDouble(4, hoaDon.getTienKhach());
-            stmtHD.setDouble(5, hoaDon.getThue());
-            stmtHD.setString(6, hoaDon.getMaKH());
-            stmtHD.setString(7, hoaDon.getMaNV());
-
-            if (hoaDon.getMaKM() != null) {
-                stmtHD.setInt(8, hoaDon.getMaKM());
-            } else {
-                stmtHD.setNull(8, java.sql.Types.INTEGER);
-            }
+            stmtHD.setDouble(3, hoaDon.getTienKhach());
+            stmtHD.setDouble(4, hoaDon.getThue());
+            stmtHD.setString(5, hoaDon.getKhachHang().getMaKH());
+            stmtHD.setString(6, hoaDon.getNhanVien().getMaNv());
 
             int n = stmtHD.executeUpdate();
 
@@ -89,7 +82,7 @@ public class DAO_HoaDon {
 
                 for (CT_HoaDon ct : hoaDon.getChiTietList()) {
                     stmtCT.setString(1, hoaDon.getMaHoaDon());
-                    stmtCT.setString(2, ct.getMaSP());
+                    stmtCT.setString(2, ct.getSanPham().getMaSP());
                     stmtCT.setInt(3, ct.getSoLuong());
                     stmtCT.addBatch();
                 }
@@ -152,4 +145,5 @@ public class DAO_HoaDon {
         return soLan;
     }
 }
+
 

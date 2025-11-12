@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import com.connectDB.ConnectDB;
 import com.entity.NhanVien;
 
-public class DAO_Staff {
+public class DAO_NhanVien {
     /**
      * Lấy mã nhân viên đầu tiên trong database
      * @return Mã nhân viên hoặc null nếu không có
