@@ -120,6 +120,13 @@ public class GUI_General extends JPanel {
         sidebarPanel.add(btnNhanVien);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        // Tab Thống kê
+        JButton btnThongKe = createTabButton("Thống kê", "📖");
+        btnThongKe.addActionListener(e -> showTab(new TAB_ThongKe()));
+        sidebarPanel.add(btnThongKe);
+        
+        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         sidebarPanel.add(Box.createVerticalGlue());
     }

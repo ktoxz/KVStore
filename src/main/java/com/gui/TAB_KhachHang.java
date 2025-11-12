@@ -8,12 +8,14 @@ import java.awt.event.MouseListener;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 
@@ -31,7 +33,16 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
     private JTable tableKH;
     private DefaultTableModel modelKH;
     
+ // ===== THÊM CÁC BIẾN SAU Ở ĐẦU LỚP =====
+    private List<KhachHang> listAll; // danh sách tất cả khách hàng
+    private int currentPage = 1;
+    private final int rowsPerPage = 10;
+    private JLabel lblPageInfo;
+    private JButton btnPrev, btnNext;
+
+    
     private DAO_KhachHang kh_dao;
+	private JButton btnLamMoi;
 
     public TAB_KhachHang() {
 
@@ -142,11 +153,28 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         btnSua.setBackground(Color.ORANGE);
         btnSua.setForeground(textColor);
         btnSua.setPreferredSize(sizeBtn);
+        
+        btnLamMoi = new JButton("Làm mới");
+        btnLamMoi.setBackground(Color.GREEN);
+        btnLamMoi.setForeground(textColor);
+        btnLamMoi.setPreferredSize(sizeBtn);
 
         Box bBtns = Box.createHorizontalBox();
         bBtns.add(btnThem);
         bBtns.add(Box.createHorizontalStrut(10));
         bBtns.add(btnSua);
+        bBtns.add(Box.createHorizontalStrut(10));
+        bBtns.add(btnLamMoi);
+        
+        // Ảnh
+        ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
+        Image scaled = icon.getImage().getScaledInstance(400, 420, Image.SCALE_SMOOTH);
+        JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+        imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imgLabel.setBorder(new EmptyBorder(40, 0, 40, 0));
+        
+        Box bIcon = Box.createHorizontalBox();
+        bIcon.add(imgLabel);
 
         // Add to vertical box
         box.add(b1); box.add(Box.createVerticalStrut(8));
@@ -155,7 +183,8 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         box.add(b4); box.add(Box.createVerticalStrut(8));
         box.add(b5); box.add(Box.createVerticalStrut(8));
         box.add(b6); box.add(Box.createVerticalStrut(12));
-        box.add(bBtns);
+        box.add(bBtns); box.add(Box.createVerticalStrut(8));
+        box.add(bIcon);
 
         pLeft.add(box, BorderLayout.NORTH);
 
@@ -178,8 +207,36 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 
         String[] header = {"Mã KH", "Tên KH", "Giới tính", "SĐT", "Ngày tạo", "Điểm tích lũy"};
         modelKH = new DefaultTableModel(header, 0);
-        tableKH = new JTable(modelKH); // lon ten
+        tableKH = new JTable(modelKH); 
         JScrollPane pane = new JScrollPane(tableKH);
+        
+     // Panel điều hướng phân trang
+        JPanel pPagination = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnPrev = new JButton("< Trang trước");
+        btnNext = new JButton("Trang sau >");
+        lblPageInfo = new JLabel("Trang 1 / 1");
+
+        pPagination.add(btnPrev);
+        pPagination.add(lblPageInfo);
+        pPagination.add(btnNext);
+
+        pRight.add(pPagination, BorderLayout.SOUTH);
+
+        // Thêm sự kiện cho 2 nút
+        btnPrev.addActionListener(e -> {
+            if (currentPage > 1) {
+                currentPage--;
+                loadDataToTable();
+            }
+        });
+
+        btnNext.addActionListener(e -> {
+            int totalPage = (int) Math.ceil((double) listAll.size() / rowsPerPage);
+            if (currentPage < totalPage) {
+                currentPage++;
+                loadDataToTable();
+            }
+        });
 
         pRight.add(pSearch, BorderLayout.NORTH);
         pRight.add(pane, BorderLayout.CENTER);
@@ -196,22 +253,46 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         // Sự kiện
         btnThem.addActionListener(this);
         btnSua.addActionListener(this);
+        btnLamMoi.addActionListener(this);
         btnTim.addActionListener(this);
         tableKH.addMouseListener(this);
     }
     
+    private void loadDataToTable() {
+        modelKH.setRowCount(0); // Xóa bảng
+
+        int start = (currentPage - 1) * rowsPerPage;
+        int end = Math.min(start + rowsPerPage, listAll.size());
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        for (int i = start; i < end; i++) {
+            KhachHang khachHang = listAll.get(i);
+            modelKH.addRow(new Object[]{
+                khachHang.getMaKH(),
+                khachHang.getTenKH(),
+                khachHang.isGioiTinh() ? "Nữ" : "Nam",
+                khachHang.getSdt(),
+                khachHang.getNgayTao().format(fmt),
+                khachHang.getDiemTichLuy()
+            });
+        }
+
+        // Cập nhật label hiển thị trang
+        int totalPage = (int) Math.ceil((double) listAll.size() / rowsPerPage);
+        lblPageInfo.setText("Trang " + currentPage + " / " + totalPage);
+
+        // Vô hiệu hóa nút nếu ở đầu/cuối
+        btnPrev.setEnabled(currentPage > 1);
+        btnNext.setEnabled(currentPage < totalPage);
+    }
+
+    
     public void DocDuLieuVaoDatabase() {
-    	DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    	List<KhachHang> list = kh_dao.getAllKhachHang();
-		for (KhachHang khachHang : list) {
-			modelKH.addRow(new Object[] {khachHang.getMaKH(),
-											khachHang.getTenKH(),
-											khachHang.isGioiTinh()?"Nữ":"Nam",
-											khachHang.getSdt(),
-											khachHang.getNgayTao().format(fmt),
-											khachHang.getDiemTichLuy()});
-		}
-	}
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        listAll = kh_dao.getAllKhachHang(); // lưu toàn bộ danh sách khách hàng
+        loadDataToTable(); // chỉ load 10 dòng đầu tiên
+    }
+
     
     // Kiểm tra dữ liệu nhập
     public boolean ValidDate() {
@@ -227,7 +308,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
     		    return false;
     		}
     	}else {
-    		JOptionPane.showMessageDialog(this, "Phải nhập tên khách hàng!");
+    		JOptionPane.showMessageDialog(this, "Nhập liệu không hợp lệ!");
     		txtTenKH.requestFocus();
     		return false;
     	}
@@ -239,14 +320,14 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
     	}
     	
     	// Kiểm tra số điện thoại
-    	if(sdt.length()>0) {
-    		if(!sdt.matches("[0-9]{10}")) {
-    			JOptionPane.showMessageDialog(this, "Số điện thoại không đủ số");
+    	if(sdt.length()==10) {
+    		if(!sdt.matches("(0)[0-9]{9}")) {
+    			JOptionPane.showMessageDialog(this, "Số điện thoại không đúng định dạng (bắt đầu là 0)");
     		    txtTenKH.requestFocus();
     		    return false;
     		}
     	}else {
-    		JOptionPane.showMessageDialog(this, "Phải nhập số điện thoại!");
+    		JOptionPane.showMessageDialog(this, "Nhập liệu không hợp lệ!");
     		txtTenKH.requestFocus();
     		return false;
     	}
@@ -289,6 +370,14 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 				String maKh = kh_dao.phatSinhMaKH();
 				txtMaKH.setText(maKh);
 				
+				// Kiểm tra sđt
+				String sdt = txtSDT.getText().trim();
+				if(kh_dao.isTrungSoDienThoai(sdt)) {
+					JOptionPane.showMessageDialog(this, "Số điện thoại này đã tồn tại!");
+				    txtMaKH.requestFocus();
+				    return;
+				}
+				
 				KhachHang kh = revertKHFromTextfields();
 				
 				kh.setDiemTichLuy(0);
@@ -328,6 +417,25 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 			}
 		}
 		
+		// Làm mới trang
+		if(o.equals(btnLamMoi)) {
+			txtMaKH.setText("");
+			txtTenKH.setText("");
+			radNam.setSelected(false);
+			txtSDT.setText("");
+			dateChooser.setDate(new Date());
+			txtDiemTichLuy.setText("");
+			txtTim.setText("");
+			txtTenKH.requestFocus();
+			
+			// Trở về trang đầu tiên
+		    currentPage = 1;
+		    loadDataToTable(); // tải lại dữ liệu từ danh sách gốc
+
+		    // Bỏ chọn trên bảng (nếu có)
+		    tableKH.clearSelection();
+		}
+		
 		if(o.equals(btnTim)) {
 			String timSDT = txtTim.getText().trim();
 			if(timSDT.isEmpty()) {
@@ -342,19 +450,36 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 				return;
 			}
 			
-			// ✅ 1. Chọn hàng tương ứng trong bảng (nếu có)
-		    int rowCount = modelKH.getRowCount();
-		    boolean found = false;
-		    for (int i = 0; i < rowCount; i++) {
-		        String sdtTable = modelKH.getValueAt(i, 3).toString();
-		        if (sdtTable.equalsIgnoreCase(timSDT)) {
-		            tableKH.setRowSelectionInterval(i, i); // chọn hàng đó
-		            tableKH.scrollRectToVisible(tableKH.getCellRect(i, 0, true)); // cuộn tới hàng
-		            found = true;
+			int viTriTrongList = -1;
+		    for (int i = 0; i < listAll.size(); i++) {
+		        if (listAll.get(i).getMaKH().equals(kh.getMaKH())) { // dùng maKH để so sánh chính xác
+		            viTriTrongList = i;
 		            break;
 		        }
 		    }
+			
+		    if (viTriTrongList == -1) {
+		        JOptionPane.showMessageDialog(this, "Lỗi: Khách hàng tìm thấy nhưng không có trong danh sách hiện tại!");
+		        return;
+		    }
+
+		    // Tính trang cần đến
+		    int trangMoi = (viTriTrongList / rowsPerPage) + 1;
+
+		    // Nếu không phải trang hiện tại → chuyển trang
+		    if (currentPage != trangMoi) {
+		        currentPage = trangMoi;
+		        loadDataToTable(); // tải lại dữ liệu trang mới
+		    }
+
+		    //Tính chỉ số dòng trong bảng hiện tại (0 -> 9)
+		    int rowInTable = viTriTrongList % rowsPerPage;
+
+		    // Chọn dòng và cuộn đến
+		    tableKH.setRowSelectionInterval(rowInTable, rowInTable);
+		    tableKH.scrollRectToVisible(tableKH.getCellRect(rowInTable, 0, true));
 		    
+		    // Đưa dữ liệu lên form
 		    txtMaKH.setText(kh.getMaKH());
 		    txtTenKH.setText(kh.getTenKH());
 		    if(kh.isGioiTinh()) {
@@ -416,8 +541,5 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 		// TODO Auto-generated method stub
 		
 	}
-
-	
-    
     
 }
