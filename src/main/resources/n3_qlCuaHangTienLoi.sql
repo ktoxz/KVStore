@@ -91,9 +91,7 @@ CREATE TABLE KhuyenMai (
                            tenKM NVARCHAR(100),
                            moTaKM NVARCHAR(255),
                            ngayBatDau DATE,
-                           ngayKetThuc DATE,
-                           loaiKM NVARCHAR(50),
-                           FOREIGN KEY (loaiKM) REFERENCES LoaiKM(loaiKM)
+                           ngayKetThuc DATE
 );
 
 -- ============================================
@@ -104,7 +102,9 @@ CREATE TABLE CT_KhuyenMai(
                         maKM INT,
                         maSP NVARCHAR(20),
                         tiLe FLOAT CHECK (tiLe >=0),
-                        PRIMARY KEY (maKM, maSP),
+                        loaiKM NVARCHAR(50),              
+                        PRIMARY KEY (maKM, maSP, loaiKM),
+                        FOREIGN KEY (loaiKM) REFERENCES LoaiKM(loaiKM),
                         FOREIGN KEY (maKM) REFERENCES KHUYENMAI(maKM) ON DELETE CASCADE,
                         FOREIGN KEY (maSP) REFERENCES SanPham(maSP)
 );
