@@ -39,7 +39,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			CLR_TEXT_DARK = Color.BLACK;
 
 	// UI
-	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh, txtLoai;
+	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh;
+	JComboBox<String> cboLoai;
 	JTextArea txtMoTa;
 	JCheckBox chkActive;
 	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh;
@@ -57,7 +58,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
 	
 	// Img Dir
-	private static final String IMG_DIR = "src/main/resources/sp_image"; 
+//	private static final String IMG_DIR = "src/main/resources/sp_image"; 
 	
 	//data
 	List<SanPham> dsAll = new ArrayList<>();
@@ -90,11 +91,22 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		add(split, BorderLayout.CENTER);
 		
 		setTable(dao.getAllSanPham());
+		LoadCboLoaiSP();
 		bindEvents();
 		setFormModeNew();
 		
 		setBorder( createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 0) );
 
+	}
+	
+	private void LoadCboLoaiSP() {
+		DefaultComboBoxModel<String> m = new DefaultComboBoxModel<>();
+		List<String> ls = dao.getAllLoaiSanPham();
+		for(String loai : ls) {
+			m.addElement(loai);
+		}
+		cboLoai.setModel(m);
+	    cboLoai.setSelectedIndex(-1);
 	}
 	
 	private void setTable(List<SanPham> ds) {
@@ -329,8 +341,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		addRowFixed(p, gbc, "Giá (₫):", txtGia);
 
 		// --- Loại
-		txtLoai = new JTextField();
-		addRowFixed(p, gbc, "Loại SP:", txtLoai);
+		cboLoai = new JComboBox<>();
+		addRowFixed(p, gbc, "Loại SP:", cboLoai);
 
 		// --- Mô tả
 		txtMoTa = new JTextArea(6, 20);
@@ -440,29 +452,29 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		return p;
 	}
 
-	private void addRowFixed(JPanel p, GridBagConstraints gbc, String label, JTextField field) {
-		JLabel lb = new JLabel(label);
-		gbc.gridy++;
-		gbc.gridx = 0;
-		gbc.gridwidth = 1;
-		gbc.weightx = 0;
-		gbc.weighty = 0;
-		gbc.fill = GridBagConstraints.NONE;
-		p.add(lb, gbc);
+	private void addRowFixed(JPanel p, GridBagConstraints gbc, String label, JComponent field) {
+	    JLabel lb = new JLabel(label);
+	    gbc.gridy++;
+	    gbc.gridx = 0;
+	    gbc.gridwidth = 1;
+	    gbc.weightx = 0;
+	    gbc.weighty = 0;
+	    gbc.fill = GridBagConstraints.NONE;
+	    p.add(lb, gbc);
 
-		JPanel wrap = new JPanel();
-		wrap.setLayout(new BoxLayout(wrap, BoxLayout.X_AXIS));
-		wrap.add(field);
-		int h = field.getPreferredSize().height;
-		wrap.setPreferredSize(new Dimension(0, h));
-		wrap.setMinimumSize(new Dimension(0, h));
-		wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
+	    JPanel wrap = new JPanel();
+	    wrap.setLayout(new BoxLayout(wrap, BoxLayout.X_AXIS));
+	    wrap.add(field);
+	    int h = field.getPreferredSize().height;
+	    wrap.setPreferredSize(new Dimension(0, h));
+	    wrap.setMinimumSize(new Dimension(0, h));
+	    wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
 
-		gbc.gridx = 1;
-		gbc.gridwidth = 3;
-		gbc.weightx = 1;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		p.add(wrap, gbc);
+	    gbc.gridx = 1;
+	    gbc.gridwidth = 3;
+	    gbc.weightx = 1;
+	    gbc.fill = GridBagConstraints.HORIZONTAL;
+	    p.add(wrap, gbc);
 	}
 
 	private void setButtonRowHeight(AbstractButton b) {
@@ -471,8 +483,26 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			d.height = BTN_H;
 		b.setPreferredSize(d);
 	}
-
+	
 	// ====== Helpers ======
+	
+	private void selectLoai(String loai) {
+	    if (loai == null || loai.isBlank()) { 
+	        cboLoai.setSelectedIndex(-1); 
+	        return; 
+	    }
+	    loai = loai.trim();
+	    DefaultComboBoxModel<String> m = (DefaultComboBoxModel<String>) cboLoai.getModel();
+	    for (int i = 0; i < m.getSize(); i++) {
+	        if (loai.equalsIgnoreCase(m.getElementAt(i).trim())) {
+	            cboLoai.setSelectedIndex(i);
+	            return;
+	        }
+	    }
+	    m.addElement(loai);            // chưa có thì thêm vào
+	    cboLoai.setSelectedItem(loai); // rồi chọn
+	}
+	
 	private void styleButton(JButton b, Color bg, Color fg) {
 		b.setBackground(bg);
 		b.setForeground(fg);
@@ -516,7 +546,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		txtMa.setText("");
 		txtTen.setText("");
 		txtGia.setText("");
-		txtLoai.setText("");
+		cboLoai.setSelectedIndex(-1);
 		txtMoTa.setText("");
 		chkActive.setSelected(true);
 		txtPathAnh.setText("");
@@ -528,12 +558,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private void fillForm(SanPham sp) {
 		txtMa.setText(sp.getMaSP());
 		txtTen.setText(sp.getTenSP());
-		txtGia.setText(formatGia(sp.getGiaSP()));
-		txtLoai.setText(sp.getLoaiSP());
+		txtGia.setText(formatGia(sp.getGiaSP()));		
+		selectLoai(sp.getLoaiSP());
 		txtMoTa.setText(sp.getMoTaSP());
 		chkActive.setSelected(sp.isTinhTrangSP());
 		txtPathAnh.setText(sp.getHinhAnhSP() == null ? "" : sp.getHinhAnhSP());
 		lblPreview.setIcon(scaledOrPlaceholder(sp.getHinhAnhSP(), PREVIEW_W, PREVIEW_H));
+		
 	}
 
 	private void selectRowById(String id) {
@@ -554,23 +585,43 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			return;
 		}
 
-		if (o.equals(btnThem)) { 
+		if (o.equals(btnThem)) {
+			
+			//tên
 			String ten = txtTen.getText().trim();
 			if (ten.isEmpty()) {
 				JOptionPane.showMessageDialog(this, "Tên sản phẩm không được rỗng!");
 				txtTen.requestFocus();
 				return;
 			}
+			
+			//giá
 			double gia = parseGia(txtGia.getText().trim());
 			if (gia < 0) {
 				JOptionPane.showMessageDialog(this, "Giá không hợp lệ!");
 				txtGia.requestFocus();
 				return;
 			}
+			
+			//mã
 			String ma = nextIdFromDB();
+			
+			//mô tả
 			String moTa = txtMoTa.getText().trim();
-			String loai = txtLoai.getText().trim();
+			
+			//loại
+			String loai = (String) cboLoai.getSelectedItem();
+			if (loai == null || loai.trim().isEmpty()) {
+			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
+			    cboLoai.requestFocus();
+			    return;
+			}
+			loai = loai.trim();
+			
+			// trạng thái
 			boolean active = chkActive.isSelected();
+			
+			//path ảnh
 			String path = txtPathAnh.getText().trim();
 			if (path.isEmpty())
 				path = null;
@@ -586,22 +637,41 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 
 		if (o.equals(btnLuu)) { // lưu cập nhật theo mã
+			
+			//mã
 			String ma = txtMa.getText().trim();
+			
+			//tên
 			String ten = txtTen.getText().trim();
 			if (ten.isEmpty()) {
 				JOptionPane.showMessageDialog(this, "Tên sản phẩm không được rỗng!");
 				txtTen.requestFocus();
 				return;
 			}
+			
+			//giá
 			double gia = parseGia(txtGia.getText().trim());
 			if (gia < 0) {
 				JOptionPane.showMessageDialog(this, "Giá không hợp lệ!");
 				txtGia.requestFocus();
 				return;
 			}
+			//mô tả
 			String moTa = txtMoTa.getText().trim();
-			String loai = txtLoai.getText().trim();
+			
+			//loại
+			String loai = (String) cboLoai.getSelectedItem();
+			if (loai == null || loai.trim().isEmpty()) {
+			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
+			    cboLoai.requestFocus();
+			    return;
+			}
+			loai = loai.trim();
+			
+			//trạng thái
 			boolean active = chkActive.isSelected();
+			
+			//path ảnh
 			String path = txtPathAnh.getText().trim();
 			
 			if (path.isEmpty()) {

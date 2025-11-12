@@ -3,9 +3,10 @@ package com.gui;
 import com.dao.DAO_SanPham;
 import com.dao.DAO_KhachHang;
 import com.dao.DAO_HoaDon;
-import com.dao.DAO_Staff;
+import com.dao.DAO_NhanVien;
 import com.entity.SanPham;
 import com.entity.KhachHang;
+import com.entity.NhanVien;
 import com.entity.HoaDon;
 import com.entity.CT_HoaDon;
 import com.service.PDFExportService;
@@ -48,7 +49,7 @@ public class TAB_BanHang extends JPanel {
     private DAO_SanPham daoSP = new DAO_SanPham();
     private DAO_KhachHang daoKH = new DAO_KhachHang();
     private DAO_HoaDon daoHD = new DAO_HoaDon();
-    private DAO_Staff daoStaff = new DAO_Staff();
+    private DAO_NhanVien daoStaff = new DAO_NhanVien();
     private JPopupMenu popupSearch; // Di chuyển ra ngoài để tái sử dụng
     
     // Customer info fields
@@ -616,7 +617,8 @@ public class TAB_BanHang extends JPanel {
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
                     // Lấy mã nhân viên từ database
-                    String maNV = daoStaff.getFirstMaNV();
+                	NhanVien nv = daoStaff.getFirstNV();
+                    String maNV = nv.getMaNV();
                     if (maNV == null) {
                         JOptionPane.showMessageDialog(this,
                             "Không tìm thấy nhân viên trong hệ thống!\nVui lòng thêm nhân viên trước khi thanh toán.",

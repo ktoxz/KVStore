@@ -7,6 +7,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DAO_SanPham {
+	
+	// =========================
+    //  LẤY TOÀN BỘ LOẠI SẢN PHẨM
+    // =========================
+    public List<String> getAllLoaiSanPham() {
+        List<String> ds = new ArrayList<>();
+        String sql = "SELECT * FROM LoaiSanPham";
+        Connection con = ConnectDB.getCon(); // ❌ không dùng try-with-resource ở đây
+        if (con == null) {
+            System.err.println("Kết nối DB chưa được thiết lập!");
+            return ds;
+        }
+
+        try (PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                ds.add(rs.getString(1));
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.print("Lấy các loại sản phẩm thành công!\n");
+        return ds;
+    }
 
     // =========================
     //  LẤY TOÀN BỘ SẢN PHẨM
@@ -16,7 +42,7 @@ public class DAO_SanPham {
         String sql = "SELECT * FROM SanPham";
         Connection con = ConnectDB.getCon(); // ❌ không dùng try-with-resource ở đây
         if (con == null) {
-            System.err.println("Kết nối DB chưa được thiết lập!");
+            System.err.println("Kết nối DB chưa được thiết lập!\n");
             return ds;
         }
 
