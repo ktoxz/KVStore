@@ -5,18 +5,20 @@ import com.enums.LoaiKM;
 public class CT_KhuyenMai {
     private KhuyenMai khuyenMai;
     private SanPham sanPham;
-    private double giaTri;      // tỉ lệ % hoặc số tiền giảm
-    private LoaiKM loaiKM;      // sử dụng enum thay vì String
+    private double giaTri;     // % hoặc số tiền giảm
+    private LoaiKM loaiKM;     // Enum thay vì String
 
     public CT_KhuyenMai() {}
 
-    public CT_KhuyenMai(KhuyenMai khuyenMai, SanPham sanPham, double giaTri) {
+    public CT_KhuyenMai(KhuyenMai khuyenMai, SanPham sanPham, double giaTri, LoaiKM loaiKM) {
         this.khuyenMai = khuyenMai;
         this.sanPham = sanPham;
         this.giaTri = giaTri;
+        this.loaiKM = loaiKM;
     }
 
-    // Getter & Setter
+
+    // --- Getter & Setter ---
     public KhuyenMai getKhuyenMai() { return khuyenMai; }
     public void setKhuyenMai(KhuyenMai khuyenMai) { this.khuyenMai = khuyenMai; }
 
@@ -31,7 +33,7 @@ public class CT_KhuyenMai {
 
     @Override
     public String toString() {
-        return "CT_KhuyenMai{" +
+        return "ChiTietKhuyenMai{" +
                 "KM=" + (khuyenMai != null ? khuyenMai.getTenKM() : "null") +
                 ", SP=" + (sanPham != null ? sanPham.getTenSP() : "null") +
                 ", GiaTri=" + giaTri +

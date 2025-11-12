@@ -1,10 +1,10 @@
 package com;
 
 import com.connectDB.ConnectDB;
-import com.dao.DAO_SanPham;
 import com.dao.DAO_CT_KhuyenMai;
-import com.entity.SanPham;
+import com.dao.DAO_SanPham;
 import com.entity.CT_KhuyenMai;
+import com.entity.SanPham;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.gui.GUI_Login;
 

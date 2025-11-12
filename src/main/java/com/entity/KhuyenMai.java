@@ -33,6 +33,9 @@ public class KhuyenMai {
         this.ngayKetThuc = ngayKetThuc;
     }
 
+    public KhuyenMai(int maKM) {
+    }
+
     // --- Getters and Setters ---
     
     public int getMaKM() {

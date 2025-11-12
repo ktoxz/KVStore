@@ -3,6 +3,7 @@ package com.dao;
 import com.connectDB.ConnectDB;
 import com.entity.CT_KhuyenMai;
 import com.entity.KhuyenMai;
+import com.entity.SanPham;
 import com.enums.LoaiKM;
 
 import java.sql.*;
@@ -10,181 +11,218 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DAO_ChiTietKhuyenMai (Merged version)
+ * Kết hợp chức năng đầy đủ từ DAO_ChiTietKhuyenMai và DAO_CT_KhuyenMai.
+ * Hỗ trợ cả CRUD và truy vấn nâng cao (best promotion, product filter,...)
+ */
 public class DAO_CT_KhuyenMai {
 
-    // ====================== LẤY DANH SÁCH ======================
+    // ====================== TRUY VẤN CƠ BẢN ======================
 
-    // Lấy toàn bộ chi tiết theo mã khuyến mãi
-    public List<CT_KhuyenMai> findByMaKM(int maKM) throws SQLException {
-        String sql = "SELECT maKM, maSP, tiLe, loaiKM FROM CT_KhuyenMai WHERE maKM = ? ORDER BY maSP";
+    public List<CT_KhuyenMai> findByMaKM(int maKM) {
         List<CT_KhuyenMai> list = new ArrayList<>();
+        String sql = """
+            SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
+                   sp.tenSP, sp.giaSP,
+                   km.tenKM
+            FROM CT_KhuyenMai ct
+            JOIN SanPham sp ON ct.maSP = sp.maSP
+            JOIN KhuyenMai km ON ct.maKM = km.maKM
+            WHERE ct.maKM = ?
+            ORDER BY ct.maSP
+            """;
 
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        if (con == null) return list;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, maKM);
-            rs = ps.executeQuery();
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    KhuyenMai km = new KhuyenMai();
+                    km.setMaKM(rs.getInt("maKM"));
+                    km.setTenKM(rs.getString("tenKM"));
 
-            while (rs.next()) {
-                CT_KhuyenMai ct = new CT_KhuyenMai();
-                ct.setKhuyenMai(new KhuyenMai(maKM));
-                ct.setSanPham(null); // sẽ set sau nếu cần
-                ct.setGiaTri(rs.getDouble("tiLe"));
-                ct.setLoaiKM(LoaiKM.valueOf(rs.getString("loaiKM")));
-                list.add(ct);
+                    SanPham sp = new SanPham(
+                            rs.getString("maSP"),
+                            rs.getString("tenSP"),
+                            rs.getDouble("giaSP")
+                    );
+
+                    CT_KhuyenMai ct = new CT_KhuyenMai(
+                            km,
+                            sp,
+                            rs.getDouble("tiLe"),
+                            LoaiKM.valueOf(rs.getString("loaiKM"))
+                    );
+
+                    list.add(ct);
+                }
             }
-        } finally {
-            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return list;
     }
 
-    // Lấy 1 bản ghi chi tiết
-    public CT_KhuyenMai findOne(int maKM, String maSP) throws SQLException {
-        String sql = "SELECT maKM, maSP, tiLe, loaiKM FROM CT_KhuyenMai WHERE maKM=? AND maSP=?";
-        Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+    public CT_KhuyenMai findOne(int maKM, String maSP, String loaiKM) {
+        String sql = """
+            SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
+                   sp.tenSP, sp.giaSP,
+                   km.tenKM
+            FROM CT_KhuyenMai ct
+            JOIN SanPham sp ON ct.maSP = sp.maSP
+            JOIN KhuyenMai km ON ct.maKM = km.maKM
+            WHERE ct.maKM = ? AND ct.maSP = ? AND ct.loaiKM = ?
+            """;
 
-        try {
-            ps = con.prepareStatement(sql);
+        Connection con = ConnectDB.getInstance().getCon();
+        if (con == null) return null;
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, maKM);
             ps.setString(2, maSP);
-            rs = ps.executeQuery();
+            ps.setString(3, loaiKM);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    KhuyenMai km = new KhuyenMai();
+                    km.setMaKM(rs.getInt("maKM"));
+                    km.setTenKM(rs.getString("tenKM"));
 
-            if (rs.next()) {
-                CT_KhuyenMai ct = new CT_KhuyenMai();
-                ct.setKhuyenMai(new KhuyenMai(maKM));
-                ct.setGiaTri(rs.getDouble("tiLe"));
-                ct.setLoaiKM(LoaiKM.valueOf(rs.getString("loaiKM")));
-                return ct;
+                    SanPham sp = new SanPham(
+                            rs.getString("maSP"),
+                            rs.getString("tenSP"),
+                            rs.getDouble("giaSP")
+                    );
+
+                    CT_KhuyenMai ct = new CT_KhuyenMai(
+                            km,
+                            sp,
+                            rs.getDouble("tiLe"),
+                            LoaiKM.valueOf(rs.getString("loaiKM"))
+                    );
+                }
             }
-        } finally {
-            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return null;
     }
 
-    // ====================== THÊM / SỬA / XÓA ======================
+    // ====================== CRUD ======================
 
-    public int insert(CT_KhuyenMai ct) throws SQLException {
+    public boolean insert(CT_KhuyenMai ct) {
         String sql = "INSERT INTO CT_KhuyenMai(maKM, maSP, tiLe, loaiKM) VALUES(?,?,?,?)";
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
+        if (con == null) return false;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, ct.getKhuyenMai().getMaKM());
             ps.setString(2, ct.getSanPham().getMaSP());
             ps.setDouble(3, ct.getGiaTri());
-            ps.setString(4, ct.getLoaiKM().name());
-            return ps.executeUpdate();
-        } finally {
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+            ps.setString(4, ct.getLoaiKM().toString());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    public int update(CT_KhuyenMai ct) throws SQLException {
-        String sql = "UPDATE CT_KhuyenMai SET tiLe=?, loaiKM=? WHERE maKM=? AND maSP=?";
+    public boolean update(CT_KhuyenMai ct) {
+        String sql = "UPDATE CT_KhuyenMai SET tiLe=? WHERE maKM=? AND maSP=? AND loaiKM=?";
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
+        if (con == null) return false;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setDouble(1, ct.getGiaTri());
-            ps.setString(2, ct.getLoaiKM().name());
-            ps.setInt(3, ct.getKhuyenMai().getMaKM());
-            ps.setString(4, ct.getSanPham().getMaSP());
-            return ps.executeUpdate();
-        } finally {
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+            ps.setInt(2, ct.getKhuyenMai().getMaKM());
+            ps.setString(3, ct.getSanPham().getMaSP());
+            ps.setString(4, ct.getLoaiKM().toString());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    public int delete(int maKM, String maSP) throws SQLException {
-        String sql = "DELETE FROM CT_KhuyenMai WHERE maKM=? AND maSP=?";
+    public boolean delete(int maKM, String maSP, String loaiKM) {
+        String sql = "DELETE FROM CT_KhuyenMai WHERE maKM=? AND maSP=? AND loaiKM=?";
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
+        if (con == null) return false;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, maKM);
             ps.setString(2, maSP);
-            return ps.executeUpdate();
-        } finally {
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+            ps.setString(3, loaiKM);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    public int deleteAllOf(int maKM) throws SQLException {
+    public boolean deleteAllOf(int maKM) {
         String sql = "DELETE FROM CT_KhuyenMai WHERE maKM=?";
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
+        if (con == null) return false;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, maKM);
-            return ps.executeUpdate();
-        } finally {
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    // ====================== TRUY VẤN ĐẶC BIỆT ======================
+    // ====================== TRUY VẤN NÂNG CAO ======================
 
-    public List<CT_KhuyenMai> findBySanPham(String maSP) throws SQLException {
+    public List<CT_KhuyenMai> findBySanPham(String maSP) {
         String sql = """
             SELECT ctkm.maKM, ctkm.maSP, ctkm.tiLe, ctkm.loaiKM,
                    km.tenKM, km.moTaKM, km.ngayBatDau, km.ngayKetThuc
             FROM CT_KhuyenMai ctkm
             JOIN KhuyenMai km ON ctkm.maKM = km.maKM
-            WHERE ctkm.maSP = ? 
-              AND km.ngayBatDau <= ? 
+            WHERE ctkm.maSP = ?
+              AND km.ngayBatDau <= ?
               AND km.ngayKetThuc >= ?
             """;
 
         List<CT_KhuyenMai> list = new ArrayList<>();
         LocalDate today = LocalDate.now();
         Connection con = ConnectDB.getInstance().getCon();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
 
-        try {
-            ps = con.prepareStatement(sql);
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maSP);
             ps.setDate(2, Date.valueOf(today));
             ps.setDate(3, Date.valueOf(today));
-            rs = ps.executeQuery();
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    KhuyenMai km = new KhuyenMai(
+                            rs.getInt("maKM"),
+                            rs.getString("tenKM"),
+                            rs.getString("moTaKM"),
+                            rs.getDate("ngayBatDau"),
+                            rs.getDate("ngayKetThuc")
+                    );
 
-            while (rs.next()) {
-                KhuyenMai km = new KhuyenMai(
-                        rs.getInt("maKM"),
-                        rs.getString("tenKM"),
-                        rs.getString("moTaKM"),
-                        rs.getDate("ngayBatDau"),
-                        rs.getDate("ngayKetThuc")
-                );
+                    String maSp = rs.getString("maSP");
+                    SanPham sp = new DAO_SanPham().findById(maSp);
+                    LoaiKM loaiKM = LoaiKM.valueOf(rs.getString("loaiKM"));
 
-                CT_KhuyenMai ctkm = new CT_KhuyenMai(km, null, rs.getDouble("tiLe"));
-                ctkm.setLoaiKM(LoaiKM.valueOf(rs.getString("loaiKM")));
-                list.add(ctkm);
+                    CT_KhuyenMai ctkm = new CT_KhuyenMai(km, sp, rs.getDouble("tiLe"), loaiKM);
+                    ctkm.setLoaiKM(LoaiKM.valueOf(rs.getString("loaiKM")));
+                    list.add(ctkm);
+                }
             }
-        } finally {
-            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
-            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return list;
     }
 
-    public CT_KhuyenMai findBestForProduct(String maSP) throws SQLException {
+    public CT_KhuyenMai findBestForProduct(String maSP) {
         List<CT_KhuyenMai> list = findBySanPham(maSP);
         if (list.isEmpty()) return null;
         return list.stream()

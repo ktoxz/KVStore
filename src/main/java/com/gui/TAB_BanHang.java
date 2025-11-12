@@ -1,10 +1,6 @@
 package com.gui;
 
-import com.dao.DAO_SanPham;
-import com.dao.DAO_KhachHang;
-import com.dao.DAO_HoaDon;
-import com.dao.DAO_NhanVien;
-import com.dao.DAO_CT_KhuyenMai; // added
+import com.dao.*;
 import com.entity.*;
 import com.enums.LoaiKM; // added
 import com.service.PDFExportService;

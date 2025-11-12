@@ -1,10 +1,11 @@
 package com.gui;
 
 import com.dao.DAO_KhuyenMai;
-import com.dao.DAO_ChiTietKhuyenMai;
+import com.dao.DAO_CT_KhuyenMai;
 import com.entity.KhuyenMai;
 import com.entity.SanPham; // Cần import SanPham
-import com.entity.ChiTietKhuyenMai;
+import com.entity.CT_KhuyenMai;
+import com.enums.LoaiKM;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -32,7 +33,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
     // DAO
     private final DAO_KhuyenMai daoKM = new DAO_KhuyenMai();
-    private final DAO_ChiTietKhuyenMai daoCT = new DAO_ChiTietKhuyenMai();
+    private final DAO_CT_KhuyenMai daoCT = new DAO_CT_KhuyenMai();
 
     // ==== Chuẩn hóa Màu sắc & Style ====
     private static final Color CLR_BG = Color.WHITE;
@@ -416,14 +417,14 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     // ĐÃ XÓA: rebuildPagingKM() và pageBtn()
     
     // --- Load/Refresh cho CT ---
-    private void populateTableCT(List<ChiTietKhuyenMai> ds) {
+    private void populateTableCT(List<CT_KhuyenMai> ds) {
         mdlCT.setRowCount(0);
-        for (ChiTietKhuyenMai ct : ds) {
+        for (CT_KhuyenMai ct : ds) {
             mdlCT.addRow(new Object[]{
-                    ct.getSp().getMaSP(),    
-                    ct.getKm().getMaKM(),    
+                    ct.getSanPham().getMaSP(),
+                    ct.getKhuyenMai().getMaKM(),
                     ct.getLoaiKM(),          
-                    ct.getTiLe()             
+                    ct.getGiaTri()
             });
         }
     }
@@ -547,7 +548,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         try {
             int kmID = getSelectedKMId();
             if (kmID == -1) return;
-            ChiTietKhuyenMai ct = collectCT();
+            CT_KhuyenMai ct = collectCT();
             if (daoCT.insert(ct)) {
                 loadTableCT(kmID); 
             } else {
@@ -570,11 +571,11 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         try {
             int kmID = getSelectedKMId();
             if (kmID == -1) return;
-            ChiTietKhuyenMai ct = collectCT();
+            CT_KhuyenMai ct = collectCT();
             String spGoc = String.valueOf(mdlCT.getValueAt(modelRow, 0));
             String loaiGoc = String.valueOf(mdlCT.getValueAt(modelRow, 2));
 
-            if (!ct.getSp().getMaSP().equals(spGoc) || !ct.getLoaiKM().equals(loaiGoc)) {
+            if (!ct.getSanPham().getMaSP().equals(spGoc) || !ct.getLoaiKM().equals(loaiGoc)) {
                 msg("Không thể thay đổi Mã SP hoặc Loại CT khi cập nhật. Hãy Xóa và Thêm mới.");
                 return;
             }
@@ -725,11 +726,11 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
      * Lỗi là do SanPham.java không có constructor rỗng 'new SanPham()'.
      * Chúng ta dùng constructor 'new SanPham(maSP, tenSP, giaSP)' mà bạn đã cung cấp.
      */
-    private ChiTietKhuyenMai collectCT() {
+    private CT_KhuyenMai collectCT() {
         int kmID = Integer.parseInt(txtCT_MaKM.getText().trim());
         String spID = txtCT_MaSP.getText().trim();
         double tiLe = Double.parseDouble(txtCT_TiLe.getText().trim());
-        String loaiKM = String.valueOf(cbCT_LoaiKM.getSelectedItem());
+        LoaiKM loaiKM = LoaiKM.valueOf(String.valueOf(cbCT_LoaiKM.getSelectedItem()));
         
         KhuyenMai km = new KhuyenMai();
         km.setMaKM(kmID);
@@ -742,7 +743,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         // Chúng ta chỉ cần mã, 2 cái kia có thể để rỗng/0
         SanPham sp = new SanPham(spID, "", 0); 
         
-        return new ChiTietKhuyenMai(km, sp, tiLe, loaiKM);
+        return new CT_KhuyenMai(km, sp, tiLe, loaiKM);
     }
 
     // =================================================================

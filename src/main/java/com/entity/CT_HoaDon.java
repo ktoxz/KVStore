@@ -1,7 +1,6 @@
 package com.entity;
 
 import com.dao.DAO_CT_KhuyenMai;
-import com.enums.LoaiKM;
 
 public class CT_HoaDon {
     private String maHoaDon;
