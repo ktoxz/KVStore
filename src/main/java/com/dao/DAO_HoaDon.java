@@ -71,7 +71,7 @@ public class DAO_HoaDon {
             stmtHD.setDouble(3, hoaDon.getTienKhach());
             stmtHD.setDouble(4, hoaDon.getThue());
             stmtHD.setString(5, hoaDon.getKhachHang().getMaKH());
-            stmtHD.setString(6, hoaDon.getNhanVien().getMaNv());
+            stmtHD.setString(6, hoaDon.getNhanVien().getMaNV());
 
             int n = stmtHD.executeUpdate();
 
