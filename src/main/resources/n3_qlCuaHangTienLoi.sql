@@ -81,13 +81,7 @@ CREATE TABLE LoaiKM (
 
 INSERT INTO LoaiKM VALUES
                        (N'GiamGiaPhanTramSP'),
-                       (N'GiamGiaTienSP'),
-                       (N'GiamGiaPhanTramSLSP'),
-                       (N'GiamGiaTienSLSP'),
-                       (N'TangSPKhiDuTien'),
-                       (N'GiamGiaPhanTramSPDuTien'),
-                       (N'GiamGiaTienSPDuTien'),
-                       (N'GiamGiaPhanTramHDDuTien');
+                       (N'GiamGiaTienSP');
 
 -- ============================================
 -- 7. BẢNG KHUYẾN MÃI
@@ -103,20 +97,30 @@ CREATE TABLE KhuyenMai (
 );
 
 -- ============================================
+-- BẢNG CHI TIẾT KHUYẾN MÃI
+-- ============================================
+
+CREATE TABLE CT_KhuyenMai(
+                        maKM INT,
+                        maSP NVARCHAR(20),
+                        tiLe FLOAT CHECK (tiLe >=0),
+                        PRIMARY KEY (maKM, maSP),
+                        FOREIGN KEY (maKM) REFERENCES KHUYENMAI(maKM) ON DELETE CASCADE,
+                        FOREIGN KEY (maSP) REFERENCES SanPham(maSP)
+);
+
+-- ============================================
 -- 8. BẢNG HÓA ĐƠN
 -- ============================================
 CREATE TABLE HoaDon (
                         maHoaDon NVARCHAR(20) PRIMARY KEY,
                         ngayGiaoDich DATE DEFAULT GETDATE(),
-                        thongTinChung NVARCHAR(255),
                         tienKhach FLOAT CHECK (tienKhach >= 0),
                         thue FLOAT CHECK (thue >= 0),
                         maKH NVARCHAR(10),
                         maNV NVARCHAR(20),
-                        maKM INT NULL,  -- hóa đơn có thể hoặc không có khuyến mãi
                         FOREIGN KEY (maKH) REFERENCES KhachHang(maKH),
-                        FOREIGN KEY (maNV) REFERENCES NhanVien(maNV),
-                        FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM)
+                        FOREIGN KEY (maNV) REFERENCES NhanVien(maNV)
 );
 
 -- ============================================
