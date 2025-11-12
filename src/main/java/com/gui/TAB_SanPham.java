@@ -270,6 +270,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		tbl = new JTable(mdl);
 		tbl.setRowHeight(Math.max(THUMB_H + 8, 28));
 		
+		tbl.getTableHeader().setReorderingAllowed(false);
+		tbl.getTableHeader().setResizingAllowed(false);
+		
 	    TableColumn c6 = tbl.getColumnModel().getColumn(6);
 	    c6.setCellRenderer(new DefaultTableCellRenderer() {
 	      /**
@@ -567,14 +570,38 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		
 	}
 
+	// Chọn hàng
 	private void selectRowById(String id) {
-		for (int i = 0; i < mdl.getRowCount(); i++) {
-			if (String.valueOf(mdl.getValueAt(i, 1)).equals(id)) {
-				tbl.setRowSelectionInterval(i, i);
-				tbl.scrollRectToVisible(tbl.getCellRect(i, 0, true));
-				break;
-			}
-		}
+	    if (id == null || id.isBlank()) return;
+
+	    // tìm index của mã trong dsAll (toàn bộ dữ liệu)
+	    int idx = -1;
+	    for (int i = 0; i < dsAll.size(); i++) {
+	        String ma = String.valueOf(dsAll.get(i).getMaSP());
+	        if (ma != null && id.trim().equalsIgnoreCase(ma.trim())) { idx = i; break; }
+	    }
+	    if (idx < 0) { tbl.clearSelection(); return; }
+
+	    // nhảy tới đúng trang (currentPage là 1-based)
+	    int targetPage = idx / pageSize + 1;
+	    if (currentPage != targetPage) {
+	        currentPage = targetPage;
+	        reloadTable();
+	    }
+
+	    // chọn dòng trong trang
+	    int rowInPage = idx % pageSize;
+	    int viewRow = (tbl.getRowSorter() == null)
+	            ? rowInPage
+	            : tbl.convertRowIndexToView(rowInPage);
+
+	    if (viewRow >= 0 && viewRow < tbl.getRowCount()) {
+	        tbl.getSelectionModel().setSelectionInterval(viewRow, viewRow);
+	        tbl.scrollRectToVisible(tbl.getCellRect(viewRow, 0, true));
+	        tbl.requestFocusInWindow();
+	    } else {
+	        tbl.clearSelection();
+	    }
 	}
 
 	// ====== Actions ======
@@ -633,6 +660,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			
 			reloadTable();
 			selectRowById(ma);
+			fillForm(sp);
+			
 			return;
 		}
 
