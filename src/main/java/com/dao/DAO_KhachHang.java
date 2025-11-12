@@ -56,6 +56,26 @@ public class DAO_KhachHang {
 	    return maKH;
 	}
 
+	// Kiểm tra sđt bị trùng
+	public boolean isTrungSoDienThoai(String sdt) {
+	    try {
+	    	ConnectDB.getInstance();
+	        Connection con = ConnectDB.getCon();
+	        String sql = "SELECT COUNT(*) FROM KhachHang WHERE sdt = ?";
+	        PreparedStatement ps = con.prepareStatement(sql);
+	        ps.setString(1, sdt);
+	        ResultSet rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            int count = rs.getInt(1);
+	            return count > 0;
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return false;
+	}
+
 	
 	public boolean themKH(KhachHang kh) {
 		ConnectDB.getInstance();
