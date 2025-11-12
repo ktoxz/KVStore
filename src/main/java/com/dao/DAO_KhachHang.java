@@ -171,10 +171,10 @@ public class DAO_KhachHang {
 	}
 	
 	/**
-	 * Thêm điểm tích lũy cho khách hàng dựa trên tổng tiền mua hàng
-	 * Quy tắc: Cứ 10 điểm tích lũy = 1,000 VNĐ
+	 * Thêm điểm tích lũy cho khách hàng dựa trên tổng tiền mua hàng.
+	 * Quy tắc mới: 1.000 VNĐ = 1 điểm (1 điểm = 1 VNĐ khi dùng để giảm giá)
 	 * @param maKH Mã khách hàng
-	 * @param tongTien Tổng tiền thanh toán
+	 * @param tongTien Tổng tiền dùng để quy đổi điểm (chưa VAT)
 	 * @return true nếu cập nhật thành công, false nếu thất bại
 	 */
 	public boolean themDiemTichLuy(String maKH, double tongTien) {
@@ -183,9 +183,8 @@ public class DAO_KhachHang {
 		PreparedStatement stmt = null;
 		int n = 0;
 		try {
-			// Tính điểm tích lũy: Cứ 1,000 VNĐ = 10 điểm
-			int diemThem = (int)(tongTien / 1000) * 10;
-			
+			int diemThem = (int)(tongTien / 1000); // bỏ phần lẻ dưới 1.000
+			if (diemThem <= 0) return true; // không cộng gì nhưng cũng không lỗi
 			stmt = con.prepareStatement("UPDATE KhachHang SET diemTichLuy = diemTichLuy + ? WHERE maKH = ?");
 			stmt.setInt(1, diemThem);
 			stmt.setString(2, maKH);
@@ -193,11 +192,7 @@ public class DAO_KhachHang {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
-			try {
-				if (stmt != null) stmt.close();
-			} catch (SQLException e2) {
-				e2.printStackTrace();
-			}
+			try { if (stmt != null) stmt.close(); } catch (SQLException e2) { e2.printStackTrace(); }
 		}
 		return n > 0;
 	}
@@ -214,15 +209,12 @@ public class DAO_KhachHang {
 		PreparedStatement stmt = null;
 		int n = 0;
 		try {
-			// Kiểm tra số điểm hiện tại trước
 			stmt = con.prepareStatement("SELECT diemTichLuy FROM KhachHang WHERE maKH = ?");
 			stmt.setString(1, maKH);
 			ResultSet rs = stmt.executeQuery();
-			
 			if (rs.next()) {
 				int diemHienTai = rs.getInt(1);
 				if (diemHienTai >= diemTru) {
-					// Đủ điểm, thực hiện trừ
 					stmt = con.prepareStatement("UPDATE KhachHang SET diemTichLuy = diemTichLuy - ? WHERE maKH = ?");
 					stmt.setInt(1, diemTru);
 					stmt.setString(2, maKH);
@@ -232,14 +224,8 @@ public class DAO_KhachHang {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
-			try {
-				if (stmt != null) stmt.close();
-			} catch (SQLException e2) {
-				e2.printStackTrace();
-			}
+			try { if (stmt != null) stmt.close(); } catch (SQLException e2) { e2.printStackTrace(); }
 		}
 		return n > 0;
 	}
-
-	
 }

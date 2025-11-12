@@ -14,9 +14,9 @@ import javax.swing.*;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.List;
@@ -65,6 +65,13 @@ public class TAB_BanHang extends JPanel {
     // Thông tin nhân viên đăng nhập (mặc định, cần truyền từ GUI_Login)
     private String maNhanVien = "NV00000001"; // Có thể set từ bên ngoài
     private String tenNhanVien = "Nhân viên"; // Có thể set từ bên ngoài
+
+    // Hiển thị số tiền khách cần trả sau khi trừ điểm
+    private JLabel lblCanTraValue;
+    // Nút bỏ dùng điểm
+    private JButton btnBoDiem;
+    // Hiển thị dự kiến điểm còn lại sau khi dùng
+    private JLabel lblDiemConLai;
 
     public TAB_BanHang() {
         setLayout(new BorderLayout(10, 10));
@@ -259,7 +266,6 @@ public class TAB_BanHang extends JPanel {
         lblPhone = new JLabel("SĐT KH:");
         lblName = new JLabel("Tên KH:");
         lblDiem = new JLabel("Điểm tích lũy:");
-        JLabel lblNoteLabel = new JLabel("Ghi chú:");
 
         txtPhone = new JTextField();
         txtName = new JTextField();
@@ -278,6 +284,12 @@ public class TAB_BanHang extends JPanel {
         gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtName, gbc);
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; pnlKH.add(lblDiem, gbc);
         gbc.gridx = 1; gbc.weightx = 1; pnlKH.add(txtDiem, gbc);
+
+        // Dòng hiển thị điểm còn lại dự kiến
+        lblDiemConLai = new JLabel("");
+        lblDiemConLai.setForeground(new Color(0, 123, 255));
+        lblDiemConLai.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        gbc.gridx = 1; gbc.gridy = 3; gbc.weightx = 1; pnlKH.add(lblDiemConLai, gbc);
 
         // Panel thêm khách hàng mới (ẩn mặc định)
         pnlNewCustomer = new JPanel(new GridBagLayout());
@@ -316,12 +328,9 @@ public class TAB_BanHang extends JPanel {
         gbcNew.gridx = 0; gbcNew.gridy = 2; gbcNew.gridwidth = 2; gbcNew.anchor = GridBagConstraints.CENTER;
         pnlNewCustomer.add(btnAddCustomer, gbcNew);
 
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; gbc.weightx = 1;
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.weightx = 1;
         pnlKH.add(pnlNewCustomer, gbc);
 
-        // Ghi chú ở cuối cùng
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1; gbc.weightx = 0; pnlKH.add(lblNoteLabel, gbc);
-        gbc.gridx = 1; gbc.weightx = 1; gbc.fill = GridBagConstraints.BOTH; pnlKH.add(scrollNote, gbc);
 
         // Sự kiện tìm kiếm khách hàng khi nhập SĐT
         txtPhone.addKeyListener(new KeyAdapter() {
@@ -450,18 +459,35 @@ public class TAB_BanHang extends JPanel {
         gbc.gridx = 0; gbc.gridy = 3; pnlTotal.add(lblTongCongRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblTongCongValue, gbc);
 
+        // Khách cần trả (sau khi trừ điểm)
+        JLabel lblCanTraRow = new JLabel("Khách cần trả:");
+        lblCanTraRow.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblCanTraRow.setForeground(new Color(33, 37, 41));
+        lblCanTraValue = new JLabel(df.format(0));
+        lblCanTraValue.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblCanTraValue.setForeground(new Color(33, 37, 41));
+        gbc.gridx = 0; gbc.gridy = 4; pnlTotal.add(lblCanTraRow, gbc);
+        gbc.gridx = 1; pnlTotal.add(lblCanTraValue, gbc);
 
-        // Nút sử dụng điểm
+        // Nút sử dụng điểm + bỏ dùng điểm
         btnSuDungDiem = new JButton("Sử dụng điểm (F1)");
         styleButton(btnSuDungDiem, new Color(0, 123, 255));
         btnSuDungDiem.setPreferredSize(new Dimension(180, 32));
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
-        pnlTotal.add(btnSuDungDiem, gbc);
+        btnBoDiem = new JButton("Bỏ dùng điểm");
+        styleButton(btnBoDiem, new Color(108, 117, 125));
+        btnBoDiem.setPreferredSize(new Dimension(140, 32));
+        btnBoDiem.setVisible(false);
+        JPanel pnlPointBtns = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        pnlPointBtns.setBackground(pnlTotal.getBackground());
+        pnlPointBtns.add(btnSuDungDiem);
+        pnlPointBtns.add(btnBoDiem);
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        pnlTotal.add(pnlPointBtns, gbc);
 
-        // Hình thức thanh toán
+        // Hình thức thanh toán (đẩy xuống)
         JLabel lblHinhThuc = new JLabel("Hình thức:");
         lblHinhThuc.setFont(fLabel);
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
         pnlTotal.add(lblHinhThuc, gbc);
         JRadioButton rbCash = new JRadioButton("Tiền mặt", true);
         JRadioButton rbBank = new JRadioButton("Chuyển khoản");
@@ -474,7 +500,8 @@ public class TAB_BanHang extends JPanel {
         pType.add(rbCash); pType.add(rbBank);
         gbc.gridx = 1; pnlTotal.add(pType, gbc);
 
-        // Tiền khách trả & tiền thối
+        // Tiền khách trả & tiền thối (đẩy xuống)
+        // Đổi y: 7 và 8
         lblKhachTraRow = new JLabel("Tiền khách trả:");
         lblKhachTraRow.setFont(fLabel);
         lblTienThoiRow = new JLabel("Tiền thối:");
@@ -487,30 +514,18 @@ public class TAB_BanHang extends JPanel {
         lblTienThoiValue = new JLabel(df.format(0));
         lblTienThoiValue.setFont(fLabel);
 
-        gbc.gridx = 0; gbc.gridy = 6; pnlTotal.add(lblKhachTraRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; pnlTotal.add(lblKhachTraRow, gbc);
         gbc.gridx = 1; pnlTotal.add(txtKhachTraField, gbc);
-        gbc.gridx = 0; gbc.gridy = 7; pnlTotal.add(lblTienThoiRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 8; pnlTotal.add(lblTienThoiRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblTienThoiValue, gbc);
 
-        // --- Mệnh giá ---
-        pnlMenhGia = new JPanel(new GridLayout(3, 3, 6, 6));
+        // --- Mệnh giá --- (đẩy xuống y=9)
+        pnlMenhGia = new JPanel(new GridLayout(2, 4, 6, 6));
         pnlMenhGia.setBackground(pnlTotal.getBackground());
-        int[] menhGia = {1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000};
-        for (int v : menhGia) {
-            JButton btn = new JButton(v / 1000 + "k");
-            btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            btn.setFocusPainted(false);
-            btn.setBackground(Color.WHITE);
-            btn.addActionListener(e -> {
-                tienKhachTra += v;
-                txtKhachTraField.setText(df.format(tienKhachTra));
-                capNhatTienThoi();
-            });
-            pnlMenhGia.add(btn);
-        }
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
+        // (Khởi tạo động sau khi có tổng tiền thông qua capNhatTongTien)
+        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
 
-        // Nút hành động
+        // Nút hành động (đẩy xuống y=10)
         JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlButtons.setBackground(pnlTotal.getBackground());
         JButton btnPay = new JButton("Thanh toán");
@@ -519,7 +534,7 @@ public class TAB_BanHang extends JPanel {
         styleButton(btnClear, new Color(220, 53, 69));
         pnlButtons.add(btnPay);
         pnlButtons.add(btnClear);
-        gbc.gridy = 9; gbc.gridx = 0; gbc.gridwidth = 2;
+        gbc.gridy = 10; gbc.gridx = 0; gbc.gridwidth = 2;
         pnlTotal.add(pnlButtons, gbc);
 
         // Gắn sự kiện
@@ -545,6 +560,13 @@ public class TAB_BanHang extends JPanel {
         // Sự kiện sử dụng điểm
         btnSuDungDiem.addActionListener(e -> xuLySuDungDiem());
 
+        // Nút bỏ dùng điểm
+        btnBoDiem.addActionListener(e -> {
+            resetDiemSuDung();
+            capNhatTongTien();
+            JOptionPane.showMessageDialog(this, "Đã bỏ sử dụng điểm.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+        });
+
         // Key binding cho F1
         InputMap inputMap = pnlTotal.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = pnlTotal.getActionMap();
@@ -566,6 +588,9 @@ public class TAB_BanHang extends JPanel {
                 capNhatTienThoi();
             }
         });
+
+        // Enter để thanh toán từ ô tiền khách trả
+        txtKhachTraField.addActionListener(e -> btnPay.doClick());
 
         // Sự kiện thanh toán
         btnPay.addActionListener(e -> {
@@ -648,7 +673,7 @@ public class TAB_BanHang extends JPanel {
                             if (diemDaSuDung > 0) {
                                 daoKH.truDiemTichLuy(currentCustomer.getMaKH(), diemDaSuDung);
                             }
-                            // Thêm điểm tích lũy từ tổng tiền (sau khi trừ 1000)
+                            // Thêm điểm tích lũy từ tổng tiền (1k = 1 điểm)
                             int diemMoi = (int)(tongTien / 1000);
                             if (diemMoi > 0) {
                                 daoKH.themDiemTichLuy(currentCustomer.getMaKH(), tongTien);
@@ -669,12 +694,40 @@ public class TAB_BanHang extends JPanel {
                         );
 
                         if (pdfPath != null) {
-                            JOptionPane.showMessageDialog(this,
-                                "Thanh toán thành công!\n" +
-                                "Mã hóa đơn: " + maHD + "\n" +
-                                "Hóa đơn đã được xuất ra: " + pdfPath,
-                                "Thành công",
-                                JOptionPane.INFORMATION_MESSAGE);
+                            int result = JOptionPane.showOptionDialog(
+                                    this,
+                                    "Thanh toán thành công!\n" +
+                                            "Mã hóa đơn: " + maHD + "\n" +
+                                            "Hóa đơn đã được xuất ra: " + pdfPath,
+                                    "Thành công",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.INFORMATION_MESSAGE,
+                                    null,
+                                    new Object[]{"Mở hóa đơn", "Đóng"},
+                                    "Mở hóa đơn"
+                            );
+
+                            if (result == JOptionPane.YES_OPTION) {
+                                try {
+                                    File pdfFile = new File(pdfPath);
+                                    if (pdfFile.exists()) {
+                                        // Mở file PDF bằng app mặc định của hệ thống (Windows, macOS, Linux)
+                                        Desktop.getDesktop().open(pdfFile);
+                                    } else {
+                                        JOptionPane.showMessageDialog(this,
+                                                "Không tìm thấy file PDF!",
+                                                "Lỗi",
+                                                JOptionPane.ERROR_MESSAGE);
+                                    }
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                    JOptionPane.showMessageDialog(this,
+                                            "Không thể mở file PDF.\n" + ex.getMessage(),
+                                            "Lỗi",
+                                            JOptionPane.ERROR_MESSAGE);
+                                }
+                            }
+
                         } else {
                             JOptionPane.showMessageDialog(this,
                                 "Thanh toán thành công!\n" +
@@ -806,15 +859,70 @@ public class TAB_BanHang extends JPanel {
         double tongCong = tongTien + vat;
         lblTongCongValue.setText(df.format(tongCong));
 
+        // Tiền khách cần trả sau khi trừ điểm
+        double tienCanTra = tongCong - tienGiamTuDiem;
+        if (tienCanTra < 0) tienCanTra = 0;
+        if (lblCanTraValue != null) lblCanTraValue.setText(df.format(tienCanTra));
+
+        // Tự động làm tròn lên nghìn và cập nhật tiền khách trả
+        double tienLamTron = Math.ceil(tienCanTra / 1000.0) * 1000;
+        tienKhachTra = tienLamTron;
+        txtKhachTraField.setText(df.format(tienKhachTra));
+
+        // Cập nhật các nút mệnh giá
+        capNhatNutMenhGia(tienLamTron);
+
         capNhatTienThoi();
+        updatePointsButtonsEnabled();
     }
 
-    private void capNhatTienThoi() {
-        double tongCong = getTongCong();
-        double tienCanTra = tongCong - tienGiamTuDiem;
-        double thoi = tienKhachTra - tienCanTra;
-        if (thoi < 0) thoi = 0;
-        lblTienThoiValue.setText(df.format(thoi));
+    private void capNhatNutMenhGia(double tienLamTron) {
+        pnlMenhGia.removeAll();
+        // Hiển thị các mức gợi ý: +1k, +2k, +5k, +10k, +100k, +200k, +500k
+        long[] increments = {1_000L, 2_000L, 5_000L, 10_000L, 100_000L, 200_000L, 500_000L};
+        for (long inc : increments) {
+            long giaTriNut = (long) tienLamTron + inc;
+            JButton btn = new JButton(df.format(giaTriNut) + "đ");
+            btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btn.setFocusPainted(false);
+            btn.setBackground(Color.WHITE);
+            btn.setToolTipText("Chọn số tiền khách trả: " + df.format(giaTriNut) + "đ (" + "+" + df.format(inc) + ")");
+            btn.addActionListener(e -> {
+                tienKhachTra = giaTriNut;
+                txtKhachTraField.setText(df.format(tienKhachTra));
+                capNhatTienThoi();
+            });
+            pnlMenhGia.add(btn);
+        }
+        pnlMenhGia.revalidate();
+        pnlMenhGia.repaint();
+    }
+
+    private void resetDiemSuDung() {
+        tienGiamTuDiem = 0;
+        diemDaSuDung = 0;
+        lblDiemGiamValue.setText("- " + df.format(0));
+        lblDiemConLai.setText("");
+        btnBoDiem.setVisible(false);
+        capNhatTienThoi();
+        updatePointsButtonsEnabled();
+    }
+
+    private void updatePointsButtonsEnabled() {
+        boolean canUse = currentCustomer != null && currentCustomer.getDiemTichLuy() > 0;
+        btnSuDungDiem.setEnabled(canUse);
+        if (currentCustomer != null) {
+            btnSuDungDiem.setToolTipText("Điểm khả dụng: " + currentCustomer.getDiemTichLuy() + " điểm");
+        } else {
+            btnSuDungDiem.setToolTipText("Vui lòng nhập khách hàng để sử dụng điểm");
+        }
+        btnBoDiem.setVisible(tienGiamTuDiem > 0);
+        if (tienGiamTuDiem > 0 && currentCustomer != null) {
+            int conLai = Math.max(0, currentCustomer.getDiemTichLuy() - diemDaSuDung);
+            lblDiemConLai.setText("Sẽ còn: " + conLai + " điểm");
+        } else {
+            if (lblDiemConLai != null && (tienGiamTuDiem == 0)) lblDiemConLai.setText("");
+        }
     }
 
     private void xuLySuDungDiem() {
@@ -822,79 +930,194 @@ public class TAB_BanHang extends JPanel {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập thông tin khách hàng để sử dụng điểm!", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
         int diemHienTai = currentCustomer.getDiemTichLuy();
         if (diemHienTai <= 0) {
             JOptionPane.showMessageDialog(this, "Khách hàng không có điểm tích lũy!", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        // Tính số tiền tối đa có thể sử dụng từ điểm (10 điểm = 1,000đ)
-        double tienToiDaTuDiem = (diemHienTai / 10.0) * 1000;
         double tongCong = getTongCong();
-
-        String input = JOptionPane.showInputDialog(this,
-            "Điểm hiện tại: " + diemHienTai + " điểm\n" +
-            "Giá trị tối đa: " + df.format(tienToiDaTuDiem) + "đ\n" +
-            "Tổng cộng cần thanh toán: " + df.format(tongCong) + "đ\n\n" +
-            "Nhập số tiền muốn sử dụng (VNĐ):",
-            "Sử dụng điểm tích lũy",
-            JOptionPane.QUESTION_MESSAGE);
-
-        if (input == null || input.trim().isEmpty()) {
+        double gioiHan10Phan = tongCong * 0.1; // Giới hạn 10%
+        double tienToiDaTuDiem = Math.min(diemHienTai, gioiHan10Phan);
+        if (tienToiDaTuDiem < 1) {
+            JOptionPane.showMessageDialog(this, "Số tiền có thể giảm quá nhỏ, không thể sử dụng điểm!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+        // Số lẻ về bội 1.000đ
+        double soLe1k = tongCong % 1000;
+        double tienSuDungSoLe = Math.min(soLe1k, tienToiDaTuDiem);
+        // Số lẻ để làm tròn xuống bội 10.000đ (ví dụ 123.000 -> giảm 3.000 về 120.000)
+        double soLe10k = tongCong % 10_000;
+        double tienSuDung10k = Math.min(soLe10k, tienToiDaTuDiem);
 
-        try {
-            double tienSuDung = Double.parseDouble(input.trim().replaceAll("[^0-9]", ""));
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sử dụng điểm tích lũy", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(520, 380);
+        dialog.setLocationRelativeTo(this);
 
+        // ===== INFO HEADER =====
+        JPanel pnlInfo = new JPanel(new GridLayout(0, 1, 4, 4));
+        pnlInfo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(12, 15, 12, 15),
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230,230,230))));
+        pnlInfo.setBackground(Color.WHITE);
+        pnlInfo.add(makeInfoLabel("Điểm hiện tại: ", df.format(diemHienTai) + " điểm"));
+        pnlInfo.add(makeInfoLabel("Tổng cộng: ", df.format(tongCong) + "đ"));
+        pnlInfo.add(makeInfoLabel("Giới hạn 10%: ", df.format(gioiHan10Phan) + "đ"));
+        pnlInfo.add(makeInfoLabel("Tối đa có thể giảm: ", df.format(tienToiDaTuDiem) + "đ"));
+        JLabel lblNote = new JLabel("<html><i>1 điểm = 1đ giảm giá (tối đa 10% hóa đơn)</i></html>");
+        lblNote.setForeground(new Color(108,117,125));
+        pnlInfo.add(lblNote);
+        dialog.add(pnlInfo, BorderLayout.NORTH);
+
+        // ===== CENTER OPTIONS =====
+        JPanel pnlCenter = new JPanel(new BorderLayout(10,10));
+        pnlCenter.setBorder(BorderFactory.createEmptyBorder(10,15,10,15));
+        pnlCenter.setBackground(Color.WHITE);
+
+        JPanel pnlQuick = new JPanel(new GridLayout(1, 0, 10, 10));
+        pnlQuick.setBackground(Color.WHITE);
+        pnlQuick.setBorder(BorderFactory.createTitledBorder("Chọn nhanh"));
+
+        double defaultSelect;
+        if (tienSuDung10k > 0) defaultSelect = tienSuDung10k; else if (tienSuDungSoLe > 0) defaultSelect = tienSuDungSoLe; else defaultSelect = tienToiDaTuDiem;
+        final double[] tienSuDungSelected = { defaultSelect };
+
+        JButton btnSoLe = new JButton("Số lẻ\n" + df.format(tienSuDungSoLe) + "đ");
+        JButton btnVe10k = new JButton("Về chẵn 10k\n" + df.format(tienSuDung10k) + "đ");
+        JButton btnMax = new JButton("Tối đa\n" + df.format(tienToiDaTuDiem) + "đ");
+        styleSelectButton(btnSoLe, false);
+        styleSelectButton(btnVe10k, false);
+        styleSelectButton(btnMax, false);
+        if (tienSuDungSoLe <= 0) btnSoLe.setEnabled(false);
+        if (tienSuDung10k <= 0) btnVe10k.setEnabled(false);
+
+        // Tùy chỉnh nhập tay (không dùng slider)
+        JTextField txtCustom = new JTextField(df.format((long) defaultSelect));
+
+        ActionListener quickListener = e -> {
+            JButton src = (JButton) e.getSource();
+            tienSuDungSelected[0] = src == btnSoLe ? tienSuDungSoLe : (src == btnVe10k ? tienSuDung10k : tienToiDaTuDiem);
+            // Highlight selection
+            styleSelectButton(btnSoLe, src == btnSoLe);
+            styleSelectButton(btnVe10k, src == btnVe10k);
+            styleSelectButton(btnMax, src == btnMax);
+            txtCustom.setText(df.format((long) tienSuDungSelected[0]));
+        };
+        btnSoLe.addActionListener(quickListener);
+        btnVe10k.addActionListener(quickListener);
+        btnMax.addActionListener(quickListener);
+        pnlQuick.add(btnSoLe); pnlQuick.add(btnVe10k); pnlQuick.add(btnMax);
+
+        // ===== CUSTOM INPUT =====
+        JPanel pnlCustom = new JPanel(new GridBagLayout());
+        pnlCustom.setBackground(Color.WHITE);
+        pnlCustom.setBorder(BorderFactory.createTitledBorder("Tùy chỉnh"));
+        GridBagConstraints gbcC = new GridBagConstraints();
+        gbcC.insets = new Insets(5,5,5,5);
+        gbcC.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblCustom = new JLabel("Nhập số tiền (<= " + df.format(tienToiDaTuDiem) + "đ):");
+        lblCustom.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        gbcC.gridx = 0; gbcC.gridy = 0; gbcC.gridwidth = 2; pnlCustom.add(lblCustom, gbcC);
+
+        txtCustom.setHorizontalAlignment(SwingConstants.RIGHT);
+        txtCustom.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        gbcC.gridx = 0; gbcC.gridy = 1; gbcC.gridwidth = 2; pnlCustom.add(txtCustom, gbcC);
+
+        JLabel lblPreview = new JLabel("Sẽ giảm: " + df.format((long) defaultSelect) + "đ");
+        lblPreview.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblPreview.setForeground(new Color(27,160,79));
+        gbcC.gridx = 0; gbcC.gridy = 2; gbcC.gridwidth = 2; pnlCustom.add(lblPreview, gbcC);
+
+        // Đồng bộ text field -> preview
+        txtCustom.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String raw = txtCustom.getText().replaceAll("[^0-9]", "");
+                if (raw.isEmpty()) return;
+                try {
+                    long val = Long.parseLong(raw);
+                    if (val > tienToiDaTuDiem) {
+                        val = (long) tienToiDaTuDiem;
+                        txtCustom.setText(df.format(val));
+                    }
+                    tienSuDungSelected[0] = val;
+                    lblPreview.setText("Sẽ giảm: " + df.format(val) + "đ");
+                    styleSelectButton(btnSoLe, val == tienSuDungSoLe);
+                    styleSelectButton(btnVe10k, val == tienSuDung10k);
+                    styleSelectButton(btnMax, val == tienToiDaTuDiem);
+                } catch (NumberFormatException ignored) {}
+            }
+        });
+
+        pnlCenter.add(pnlQuick, BorderLayout.NORTH);
+        pnlCenter.add(pnlCustom, BorderLayout.CENTER);
+        dialog.add(pnlCenter, BorderLayout.CENTER);
+
+        // ===== ACTION BUTTONS =====
+        JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        pnlButtons.setBackground(Color.WHITE);
+        JButton btnOK = new JButton("Xác nhận");
+        JButton btnCancel = new JButton("Hủy");
+        styleButton(btnOK, new Color(27,160,79));
+        styleButton(btnCancel, new Color(220,53,69));
+        btnOK.setPreferredSize(new Dimension(120,36));
+        btnCancel.setPreferredSize(new Dimension(120,36));
+        pnlButtons.add(btnOK); pnlButtons.add(btnCancel);
+        dialog.add(pnlButtons, BorderLayout.SOUTH);
+
+        // Pre-select highlight
+        if (defaultSelect == tienSuDungSoLe) styleSelectButton(btnSoLe, true);
+        else if (defaultSelect == tienSuDung10k) styleSelectButton(btnVe10k, true);
+        else styleSelectButton(btnMax, true);
+
+        btnOK.addActionListener(e -> {
+            double tienSuDung = tienSuDungSelected[0];
             if (tienSuDung <= 0) {
-                JOptionPane.showMessageDialog(this, "Số tiền phải lớn hơn 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog, "Số tiền phải lớn hơn 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
             if (tienSuDung > tienToiDaTuDiem) {
-                JOptionPane.showMessageDialog(this, "Số tiền vượt quá giá trị điểm hiện có!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog, "Vượt quá giới hạn! Tối đa: " + df.format(tienToiDaTuDiem) + "đ", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
-            if (tienSuDung > tongCong) {
-                JOptionPane.showMessageDialog(this, "Số tiền vượt quá tổng cộng cần thanh toán!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Tính số điểm cần trừ (làm tròn lên)
-            diemDaSuDung = (int) Math.ceil((tienSuDung / 1000.0) * 10);
+            diemDaSuDung = (int) tienSuDung; // 1 điểm = 1đ
             tienGiamTuDiem = tienSuDung;
-
-            // Cập nhật hiển thị
             lblDiemGiamValue.setText("- " + df.format(tienGiamTuDiem));
+            capNhatTongTien();
+            dialog.dispose();
+            JOptionPane.showMessageDialog(TAB_BanHang.this,
+                    "Đã giảm " + df.format(tienGiamTuDiem) + "đ (" + diemDaSuDung + " điểm)",
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+        });
+        btnCancel.addActionListener(e -> dialog.dispose());
 
-            // Tự động cập nhật tiền khách trả
-            double tienCanTra = tongCong - tienGiamTuDiem;
-            tienKhachTra = tienCanTra;
-            txtKhachTraField.setText(df.format(tienKhachTra));
+        dialog.setVisible(true);
+    }
 
-            capNhatTienThoi();
+    private JLabel makeInfoLabel(String prefix, String value) {
+        JLabel lbl = new JLabel(prefix + value);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        return lbl;
+    }
 
-            JOptionPane.showMessageDialog(this,
-                "Đã áp dụng giảm giá " + df.format(tienGiamTuDiem) + "đ\n" +
-                "Sử dụng " + diemDaSuDung + " điểm",
-                "Thành công",
-                JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Vui lòng nhập số hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+    private void styleSelectButton(JButton btn, boolean selected) {
+        btn.setFocusPainted(false);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setHorizontalTextPosition(SwingConstants.CENTER);
+        btn.setVerticalTextPosition(SwingConstants.CENTER);
+        if (selected) {
+            btn.setBackground(new Color(0,123,255));
+            btn.setForeground(Color.WHITE);
+            btn.setBorder(BorderFactory.createLineBorder(new Color(0,92,190), 2));
+        } else {
+            btn.setBackground(new Color(245,245,245));
+            btn.setForeground(Color.DARK_GRAY);
+            btn.setBorder(BorderFactory.createLineBorder(new Color(200,200,200)));
         }
     }
 
-    private void resetDiemSuDung() {
-        tienGiamTuDiem = 0;
-        diemDaSuDung = 0;
-        lblDiemGiamValue.setText("- " + df.format(0));
-        capNhatTienThoi();
-    }
-
+    // ===== Helpers restored after refactor =====
     private double getTongCong() {
         double vat = tongTien * 0.08;
         return tongTien + vat;
@@ -906,74 +1129,20 @@ public class TAB_BanHang extends JPanel {
         }
     }
 
-    private JPanel createSearchResultPanel(SanPham sp) {
-        JPanel panel = new JPanel(new BorderLayout(8, 0));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-
-        // Ảnh sản phẩm bên trái
-        JLabel lblImage = new JLabel();
-        lblImage.setPreferredSize(new Dimension(50, 50));
-        lblImage.setHorizontalAlignment(SwingConstants.CENTER);
-
-        // Tải ảnh sản phẩm
-        try {
-            String imagePath = sp.getHinhAnhSP();
-            if (imagePath != null && !imagePath.trim().isEmpty()) {
-                // Thử load ảnh từ resources
-                java.net.URL imageURL = getClass().getResource("/sp_image/" + imagePath);
-                if (imageURL != null) {
-                    ImageIcon icon = new ImageIcon(imageURL);
-                    // Scale ảnh về 50x50
-                    Image scaledImage = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-                    lblImage.setIcon(new ImageIcon(scaledImage));
-                } else {
-                    // Nếu không tìm thấy ảnh, hiển thị icon mặc định
-                    lblImage.setText("📦");
-                    lblImage.setFont(new Font("Segoe UI", Font.PLAIN, 30));
-                }
-            } else {
-                // Không có ảnh, hiển thị icon mặc định
-                lblImage.setText("📦");
-                lblImage.setFont(new Font("Segoe UI", Font.PLAIN, 30));
-            }
-        } catch (Exception e) {
-            // Lỗi khi load ảnh
-            lblImage.setText("📦");
-            lblImage.setFont(new Font("Segoe UI", Font.PLAIN, 30));
-        }
-
-        panel.add(lblImage, BorderLayout.WEST);
-
-        // Panel chứa tên và giá bên phải
-        JPanel infoPanel = new JPanel();
-        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setBackground(Color.WHITE);
-
-        JLabel lblName = new JLabel(sp.getTenSP());
-        lblName.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblPrice = new JLabel(df.format(sp.getGiaSP()) + "đ");
-        lblPrice.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        lblPrice.setForeground(new Color(220, 53, 69));
-        lblPrice.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        infoPanel.add(lblName);
-        infoPanel.add(Box.createVerticalStrut(3));
-        infoPanel.add(lblPrice);
-
-        panel.add(infoPanel, BorderLayout.CENTER);
-
-        return panel;
-    }
-
     private void setMenhGiaVisible(boolean visible) {
         pnlMenhGia.setVisible(visible);
         txtKhachTraField.setVisible(visible);
         lblTienThoiValue.setVisible(visible);
         lblKhachTraRow.setVisible(visible);
         lblTienThoiRow.setVisible(visible);
+    }
+
+    private void capNhatTienThoi() {
+        double tongCong = getTongCong();
+        double tienCanTra = tongCong - tienGiamTuDiem;
+        double tienThoi = tienKhachTra - tienCanTra;
+        if (tienThoi < 0) tienThoi = 0;
+        lblTienThoiValue.setText(df.format(tienThoi));
     }
 
     // Renderer cho cột X

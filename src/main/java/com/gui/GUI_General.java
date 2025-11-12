@@ -8,6 +8,12 @@ import java.awt.event.ActionListener;
 public class GUI_General extends JPanel {
     private JPanel contentPanel;
     private JPanel currentTabPanel;
+    private TAB_KhuyenMai tabKhuyenMai;
+    private TAB_HuongDan tabHuongDan;
+    private TAB_KhachHang tabKhachHang;
+    private TAB_BanHang tabBanHang;
+    private TAB_NhanVien tabNhanVien;
+    private TAB_SanPham tabSanPham;
 
     public GUI_General() {
         initComponents();
@@ -15,6 +21,13 @@ public class GUI_General extends JPanel {
 
     private void initComponents() {
         setLayout(new BorderLayout());
+        tabKhuyenMai = new TAB_KhuyenMai();
+        tabHuongDan = new TAB_HuongDan();
+        tabKhachHang = new TAB_KhachHang();
+        tabBanHang = new TAB_BanHang();
+        tabNhanVien = new TAB_NhanVien();
+        tabSanPham = new TAB_SanPham();
+
 
         // ===== HEADER PANEL (1/5 chiều cao) =====
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -80,35 +93,35 @@ public class GUI_General extends JPanel {
 
         // Tab Bán hàng
         JButton btnBanHang = createTabButton("Bán hàng", "🛒");
-        btnBanHang.addActionListener(e -> showTab(new TAB_BanHang()));
+        btnBanHang.addActionListener(e -> showTab(tabBanHang));
         sidebarPanel.add(btnBanHang);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Tab Sản phẩm
         JButton btnSanPham = createTabButton("Sản phẩm", "📦");
-        btnSanPham.addActionListener(e -> showTab(new TAB_SanPham()));
+        btnSanPham.addActionListener(e -> showTab(tabSanPham));
         sidebarPanel.add(btnSanPham);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Tab Khách hàng
         JButton btnKhachHang = createTabButton("Khách hàng", "👥");
-        btnKhachHang.addActionListener(e -> showTab(new TAB_KhachHang()));
+        btnKhachHang.addActionListener(e -> showTab(tabKhachHang));
         sidebarPanel.add(btnKhachHang);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Tab Khuyến mãi
         JButton btnKhuyenMai = createTabButton("Khuyến mãi", "🎁");
-        btnKhuyenMai.addActionListener(e -> showTab(new TAB_KhuyenMai()));
+        btnKhuyenMai.addActionListener(e -> showTab(tabKhuyenMai));
         sidebarPanel.add(btnKhuyenMai);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Tab Hướng dẫn
         JButton btnHuongDan = createTabButton("Hướng dẫn", "📖");
-        btnHuongDan.addActionListener(e -> showTab(new TAB_HuongDan()));
+        btnHuongDan.addActionListener(e -> showTab(tabHuongDan));
         sidebarPanel.add(btnHuongDan);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -116,7 +129,7 @@ public class GUI_General extends JPanel {
         // Bạn có thể thêm các tab khác tại đây
         // Tab Hướng dẫn
         JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
-        btnHuongDan.addActionListener(e -> showTab(new TAB_NhanVien()));
+        btnHuongDan.addActionListener(e -> showTab(tabNhanVien));
         sidebarPanel.add(btnNhanVien);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));

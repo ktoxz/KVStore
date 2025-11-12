@@ -1,15 +1,17 @@
+// java
 package com.service;
 
 import com.entity.HoaDon;
 import com.entity.CT_HoaDon;
 import com.entity.KhachHang;
 import org.xhtmlrenderer.pdf.ITextRenderer;
+import com.lowagie.text.pdf.BaseFont;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class PDFExportService {
@@ -45,7 +47,32 @@ public class PDFExportService {
             // Xuất PDF
             OutputStream os = new FileOutputStream(fileName);
             ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(htmlContent);
+
+            // 1) Load font from resources and register to renderer
+            // Put a Unicode TTF (e.g. NotoSans-Regular.ttf) into src/main/resources/fonts/
+            // 1) Load and register font
+            InputStream fontIs = PDFExportService.class.getResourceAsStream("/fonts/DejaVuSans.ttf");
+            if (fontIs != null) {
+                File tmpFont = File.createTempFile("dejavu-", ".ttf");
+                tmpFont.deleteOnExit();
+                try (FileOutputStream fos = new FileOutputStream(tmpFont)) {
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while ((len = fontIs.read(buffer)) > 0) {
+                        fos.write(buffer, 0, len);
+                    }
+                } finally {
+                    fontIs.close();
+                }
+                // Register Unicode font
+                renderer.getFontResolver().addFont(tmpFont.getAbsolutePath(), BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            }
+
+
+            // 2) Provide a base URL so relative resources (if any) resolve; use classpath root
+            String baseUrl = PDFExportService.class.getResource("/").toString();
+
+            renderer.setDocumentFromString(htmlContent, baseUrl);
             renderer.layout();
             renderer.createPDF(os);
             os.close();
@@ -85,7 +112,8 @@ public class PDFExportService {
         html.append("<head>");
         html.append("<meta charset='UTF-8'/>");
         html.append("<style>");
-        html.append("body { font-family: 'Arial', Arial, sans-serif; margin: 40px; }");
+        // Use the registered font family as primary
+        html.append("body { font-family: 'DejaVu Sans', sans-serif; margin: 40px; }");
         html.append(".header { text-align: center; margin-bottom: 30px; }");
         html.append(".header h1 { color: #2c3e50; margin: 5px 0; font-size: 28px; }");
         html.append(".header h2 { color: #e74c3c; margin: 5px 0; font-size: 24px; }");
@@ -122,7 +150,7 @@ public class PDFExportService {
         html.append("<div class='info-row'><strong>Ngày:</strong> " + hoaDon.getNgayGiaoDich().format(dateFormatter) + "</div>");
         html.append("<div class='info-row'><strong>Nhân viên:</strong> " + tenNhanVien + "</div>");
         html.append("<div class='info-row'><strong>Khách hàng:</strong> " +
-                    (khachHang != null ? khachHang.getTenKH() : "Khách vãng lai") + "</div>");
+                (khachHang != null ? khachHang.getTenKH() : "Khách vãng lai") + "</div>");
 
         if (khachHang != null) {
             html.append("<div class='info-row'><strong>Số điện thoại:</strong> " + khachHang.getSdt() + "</div>");
@@ -202,4 +230,3 @@ public class PDFExportService {
         return html.toString();
     }
 }
-
