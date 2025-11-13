@@ -49,7 +49,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	JLabel lblPreview;
 	
 	// Paging (SQL-based)
-	int pageSize = 10, currentPage = 1, totalPages = 1;
+	int pageSize = 10, currentPage = 1, totalPages = 1, totalRows = 0;
+	String currentKeyword = "";
 	JPanel pnlPaging;
 	JLabel lbPageInfo;
 
@@ -61,7 +62,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 //	private static final String IMG_DIR = "src/main/resources/sp_image"; 
 	
 	//data
-	List<SanPham> dsAll = new ArrayList<>();
+//	List<SanPham> dsAll = new ArrayList<>();
 
 
 	public TAB_SanPham() {
@@ -90,7 +91,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		
 		add(split, BorderLayout.CENTER);
 		
-		setTable(dao.getAllSanPham());
+		currentKeyword = "";
+		currentPage = 1;
+		reloadTable();
 		LoadCboLoaiSP();
 		bindEvents();
 		setFormModeNew();
@@ -107,12 +110,6 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 		cboLoai.setModel(m);
 	    cboLoai.setSelectedIndex(-1);
-	}
-	
-	private void setTable(List<SanPham> ds) {
-		currentPage = 1;
-		dsAll = ds;
-		reloadTable();
 	}
 	
 	// tải bảng và dữ liệu
@@ -138,21 +135,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	    }
 	}
 	
-	//tải trang hiên tại
+	//tải trang hiên tại (phân trang bằng SQL, không dùng dsAll)
 	private void reloadTable() {
-	    if (dsAll == null) dsAll = dao.getAllSanPham();
+	    totalRows = dao.countSanPham(currentKeyword);
 
-	    totalPages = Math.max(1, (int) Math.ceil(dsAll.size() / (double) pageSize));
+	    totalPages = Math.max(1, (int) Math.ceil(totalRows / (double) pageSize));
 	    if (currentPage < 1) currentPage = 1;
 	    if (currentPage > totalPages) currentPage = totalPages;
 
-	    int from = (currentPage - 1) * pageSize;
-	    int to   = Math.min(from + pageSize, dsAll.size());
-	    if (from < 0) from = 0;
-	    if (to < from) to = from;
-
-	    loadTable(dsAll.subList(from, to));
-	    rebuildPaging(dsAll.size());
+	    List<SanPham> dsPage = dao.getSanPhamPage(currentKeyword, currentPage, pageSize);
+	    loadTable(dsPage);
+	    rebuildPaging(totalRows);
 	}
 
 
@@ -195,18 +188,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	
 	private String nextIdFromDB() {
-	    int next = 1;
-	    for (SanPham sp : dao.getAllSanPham()) {
-	        String id = sp.getMaSP();
-	        if (id != null && id.matches("SP\\d+")) {
-	            int n = Integer.parseInt(id.replaceAll("\\D+", ""));
-	            if (n >= next) next = n + 1;
-	        }
-	    }
-	    return String.format("SP%03d", next);
+	    return dao.getNextMaSanPham();
 	}
-
-	
 	
 	// build các tiểu cấu trúc
 	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
@@ -574,20 +557,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private void selectRowById(String id) {
 	    if (id == null || id.isBlank()) return;
 
-	    // tìm index của mã trong dsAll (toàn bộ dữ liệu)
-	    int idx = -1;
-	    for (int i = 0; i < dsAll.size(); i++) {
-	        String ma = String.valueOf(dsAll.get(i).getMaSP());
-	        if (ma != null && id.trim().equalsIgnoreCase(ma.trim())) { idx = i; break; }
+	    // Lấy index của mã trong danh sách đã lọc hiện tại (SQL)
+	    int idx = dao.getIndexById(currentKeyword, id.trim());
+	    if (idx < 0) {
+	        tbl.clearSelection();
+	        return;
 	    }
-	    if (idx < 0) { tbl.clearSelection(); return; }
 
-	    // nhảy tới đúng trang (currentPage là 1-based)
+	    // Tính trang và nạp lại đúng trang
 	    int targetPage = idx / pageSize + 1;
-	    if (currentPage != targetPage) {
-	        currentPage = targetPage;
-	        reloadTable();
-	    }
+	    currentPage = targetPage;
+	    reloadTable();
 
 	    // chọn dòng trong trang
 	    int rowInPage = idx % pageSize;
@@ -656,9 +636,10 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			SanPham sp = new SanPham(ma, ten, gia, moTa, path, active, loai);
 			
 			dao.insertSanPham(sp);
-			dsAll.add(sp);
-			
-			reloadTable();
+
+			// Sau khi thêm: bỏ lọc để chắc chắn thấy sản phẩm mới
+			currentKeyword = "";
+			txtSearch.setText("");
 			selectRowById(ma);
 			fillForm(sp);
 			
@@ -715,17 +696,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			dao.deleteSanPham(ma);
 			dao.insertSanPham(sp);
 
-			if (dsAll != null) {
-				for (int i = 0; i < dsAll.size(); i++) {
-			        if (ma.equals(String.valueOf(dsAll.get(i).getMaSP()))) {
-			            dsAll.set(i, sp);
-			            break;
-			        }
-			    }
-			}
-			
-			
-			reloadTable();
+			// Sau khi sửa: bỏ lọc, nhảy về sản phẩm vừa sửa
+			currentKeyword = "";
+			txtSearch.setText("");
 			selectRowById(ma);
 			return;
 		}
@@ -749,10 +722,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			    return;
 			}
 			
-			if (dsAll != null) {
-			    dsAll.removeIf(sp -> ma.equals(String.valueOf(sp.getMaSP())));
-			}
-			
+			// Sau khi xoá: reload lại theo filter hiện tại
 			reloadTable();
 			setFormModeNew();
 			JOptionPane.showMessageDialog(this, "Đã xoá thành công!");
@@ -761,42 +731,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 		if (o.equals(btnTim) || o.equals(txtSearch)) {
 			String kw = txtSearch.getText().trim();
-			
-			if(kw.isEmpty()) {
-				setTable(dao.getAllSanPham());
-				return;
-			}
-				
-			List<SanPham> dataLs = dao.getAllSanPham();
-			List<SanPham> ans = new ArrayList<SanPham>(); 
-			
-			boolean ok;
-			
-			for(SanPham x : dataLs) {
-				String [] strLs = {
-						x.getMaSP(), 
-						x.getTenSP(), 
-						x.getMoTaSP(), 
-						Double.toString(x.getGiaSP()), 
-						x.isTinhTrangSP() ? "Đang hoạt động" : "Ngừng",
-						x.getLoaiSP(),
-				}; 
-				
-				ok = false;
-				
-				for(String subS : strLs) {
-					if(subS.toLowerCase().contains(kw.toLowerCase())) {
-						ok = true;
-						break;
-					}
-				}
-				
-				if(ok) {
-					ans.add(x);
-				}
-			}
-			
-			setTable(ans);
+			currentKeyword = kw;
+			currentPage = 1;
+			reloadTable();
 			return;
 		}
 
