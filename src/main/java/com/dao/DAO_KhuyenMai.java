@@ -26,7 +26,6 @@ public class DAO_KhuyenMai {
         return list; // Không đóng con
     }
 
-    // Hàm findAll() mà TAB_KhuyenMai (phiên bản cũ) cần
     public List<KhuyenMai> findAll() {
         List<KhuyenMai> list = new ArrayList<>();
         String sql = "SELECT * FROM KhuyenMai ORDER BY maKM DESC";
@@ -50,7 +49,6 @@ public class DAO_KhuyenMai {
         return list; // Không đóng con
     }
 
-    // Hàm search() mà TAB_KhuyenMai (phiên bản cũ) cần
     public List<KhuyenMai> search(String keyword) {
         List<KhuyenMai> list = new ArrayList<>();
         String sql = "SELECT * FROM KhuyenMai WHERE tenKM LIKE ? OR moTaKM LIKE ? ORDER BY maKM DESC";

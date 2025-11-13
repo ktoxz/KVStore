@@ -14,7 +14,7 @@ public class DAO_SanPham {
     public List<String> getAllLoaiSanPham() {
         List<String> ds = new ArrayList<>();
         String sql = "SELECT * FROM LoaiSanPham";
-        Connection con = ConnectDB.getCon(); // ❌ không dùng try-with-resource ở đây
+        Connection con = ConnectDB.getCon(); // Dùng kết nối static
         if (con == null) {
             System.err.println("Kết nối DB chưa được thiết lập!");
             return ds;
@@ -30,17 +30,16 @@ public class DAO_SanPham {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        System.out.print("Lấy các loại sản phẩm thành công!\n");
         return ds;
     }
 
     // =========================
-    //  LẤY TOÀN BỘ SẢN PHẨM
+    //  LẤY TOÀN BỘ SẢN PHẨM (Hàm Main.java cần)
     // =========================
     public List<SanPham> getAllSanPham() {
         List<SanPham> ds = new ArrayList<>();
         String sql = "SELECT * FROM SanPham";
-        Connection con = ConnectDB.getCon(); // ❌ không dùng try-with-resource ở đây
+        Connection con = ConnectDB.getCon(); // Dùng kết nối static
         if (con == null) {
             System.err.println("Kết nối DB chưa được thiết lập!\n");
             return ds;
@@ -160,16 +159,20 @@ public class DAO_SanPham {
     }
 
     // =========================
-    //  TÌM THEO LOẠI
+    //  TÌM THEO TÊN (có chứa) HOẶC MÃ (Hàm Live Search cần)
     // =========================
-    public List<SanPham> findByLoai(String loaiSP) {
+    public List<SanPham> searchByNameOrMa(String keyword, int limit) {
         List<SanPham> ds = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham WHERE loaiSP = ?";
+        String sql = "SELECT TOP (?) * FROM SanPham WHERE maSP LIKE ? OR tenSP LIKE ?";
         Connection con = ConnectDB.getCon();
         if (con == null) return ds;
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, loaiSP);
+            ps.setInt(1, limit); 
+            String query = "%" + keyword + "%";
+            ps.setString(2, query); 
+            ps.setString(3, query); 
+
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     ds.add(new SanPham(
@@ -184,14 +187,11 @@ public class DAO_SanPham {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm sản phẩm theo loại: " + e.getMessage());
+            System.err.println("Lỗi khi tìm sản phẩm theo tên/mã: " + e.getMessage());
         }
         return ds;
     }
 
-    // =========================
-    //  TÌM THEO TÊN (có chứa)
-    // =========================
     public List<SanPham> findByTen(String keyword) {
         List<SanPham> ds = new ArrayList<>();
         String sql = "SELECT TOP 10 * FROM SanPham WHERE tenSP LIKE ?";
@@ -218,59 +218,4 @@ public class DAO_SanPham {
         }
         return ds;
     }
-    
-    
-    // =========================
-    //  ĐẾN SỐ LƯỢNG SẢN PHẨM
-    // =========================
-    public int countAllSanPham() {
-        String sql = "SELECT COUNT(*) FROM SanPham";
-        int cnt = 0;
-        Connection con = ConnectDB.getCon();
-        if (con == null) return cnt;
-        
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            cnt =  rs.next() ? rs.getInt(1) : 0;
-        } catch (SQLException e) {
-        	System.err.println("Lỗi khi đếm số sản phẩm : " + e.getMessage());
-        }
-        return cnt;
-    }
-
-    // =========================
-    //  LẤY SẢN PHẨM THEO TRANG
-    // =========================
-    public List<SanPham> getPageSanPham(int offset, int limit) {
-
-    	List<SanPham> ls = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham ORDER BY MaSP OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
-        Connection con = ConnectDB.getCon();
-        if (con == null) return ls;
-
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, offset);
-            ps.setInt(2, limit);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                	SanPham sp = new SanPham(
-                            rs.getString("maSP"),
-                            rs.getString("tenSP"),
-                            rs.getDouble("giaSP"),
-                            rs.getString("moTaSP"),
-                            rs.getString("hinhAnhSP"),
-                            rs.getBoolean("tinhTrangSP"),
-                            rs.getString("loaiSP")
-                    );
-                    ls.add(sp);
-                }
-            }
-        } catch (SQLException e) {
-        	System.err.println("Lỗi khi lấy sản phẩm theo trang : " + e.getMessage());
-        }
-        return ls;
-    }
-
 }

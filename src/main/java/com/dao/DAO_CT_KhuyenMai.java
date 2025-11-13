@@ -4,24 +4,22 @@ import com.connectDB.ConnectDB;
 import com.entity.CT_KhuyenMai;
 import com.entity.KhuyenMai;
 import com.entity.SanPham;
-import com.enums.LoaiKM;
+import com.enums.LoaiKM; 
 
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO_ChiTietKhuyenMai (Merged version)
- * Kết hợp chức năng đầy đủ từ DAO_ChiTietKhuyenMai và DAO_CT_KhuyenMai.
- * Hỗ trợ cả CRUD và truy vấn nâng cao (best promotion, product filter,...)
- */
 public class DAO_CT_KhuyenMai {
+    
+    private final DAO_SanPham daoSanPham = new DAO_SanPham();
 
     // ====================== TRUY VẤN CƠ BẢN ======================
 
     public List<CT_KhuyenMai> findByMaKM(int maKM) {
         List<CT_KhuyenMai> list = new ArrayList<>();
+        // ✅ SỬA LỖI SQL: sp.maSP (thay vì sp.ma)
         String sql = """
             SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
                    sp.tenSP, sp.giaSP,
@@ -47,26 +45,27 @@ public class DAO_CT_KhuyenMai {
                     SanPham sp = new SanPham(
                             rs.getString("maSP"),
                             rs.getString("tenSP"),
-                            rs.getDouble("giaSP")
+                            rs.getDouble("giaSP"),
+                            "", "", true, "" // Giả định
                     );
 
                     CT_KhuyenMai ct = new CT_KhuyenMai(
                             km,
                             sp,
-                            rs.getDouble("tiLe"),
-                            LoaiKM.valueOf(rs.getString("loaiKM"))
+                            rs.getDouble("tiLe"), 
+                            LoaiKM.valueOf(rs.getString("loaiKM")) 
                     );
-
                     list.add(ct);
                 }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | IllegalArgumentException e) { 
             e.printStackTrace();
         }
         return list;
     }
 
     public CT_KhuyenMai findOne(int maKM, String maSP, String loaiKM) {
+        // ✅ SỬA LỖI SQL: sp.maSP (thay vì sp.ma)
         String sql = """
             SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
                    sp.tenSP, sp.giaSP,
@@ -96,21 +95,24 @@ public class DAO_CT_KhuyenMai {
                             rs.getDouble("giaSP")
                     );
 
-                    CT_KhuyenMai ct = new CT_KhuyenMai(
+                    return new CT_KhuyenMai(
                             km,
                             sp,
-                            rs.getDouble("tiLe"),
+                            rs.getDouble("tiLe"), 
                             LoaiKM.valueOf(rs.getString("loaiKM"))
                     );
                 }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | IllegalArgumentException e) {
             e.printStackTrace();
         }
         return null;
     }
 
     // ====================== CRUD ======================
+
+ // Trong: com/dao/DAO_CT_KhuyenMai.java
+ // Trong: com/dao/DAO_CT_KhuyenMai.java
 
     public boolean insert(CT_KhuyenMai ct) {
         String sql = "INSERT INTO CT_KhuyenMai(maKM, maSP, tiLe, loaiKM) VALUES(?,?,?,?)";
@@ -120,8 +122,11 @@ public class DAO_CT_KhuyenMai {
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, ct.getKhuyenMai().getMaKM());
             ps.setString(2, ct.getSanPham().getMaSP());
-            ps.setDouble(3, ct.getGiaTri());
-            ps.setString(4, ct.getLoaiKM().toString());
+            ps.setDouble(3, ct.getGiaTri()); 
+            
+            // ✅ SỬA LỖI: Dùng .name() để khớp với CSDL
+            ps.setString(4, ct.getLoaiKM().name()); 
+            
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -135,17 +140,19 @@ public class DAO_CT_KhuyenMai {
         if (con == null) return false;
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setDouble(1, ct.getGiaTri());
+            ps.setDouble(1, ct.getGiaTri()); 
             ps.setInt(2, ct.getKhuyenMai().getMaKM());
             ps.setString(3, ct.getSanPham().getMaSP());
-            ps.setString(4, ct.getLoaiKM().toString());
+            
+            // ✅ SỬA LỖI: Dùng .name() để khớp với CSDL
+            ps.setString(4, ct.getLoaiKM().name());
+            
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
-
     public boolean delete(int maKM, String maSP, String loaiKM) {
         String sql = "DELETE FROM CT_KhuyenMai WHERE maKM=? AND maSP=? AND loaiKM=?";
         Connection con = ConnectDB.getInstance().getCon();
@@ -176,7 +183,7 @@ public class DAO_CT_KhuyenMai {
         }
     }
 
-    // ====================== TRUY VẤN NÂNG CAO ======================
+    // ====================== TRUY VẤN NÂNG CAO (Hàm Main.java cần) ======================
 
     public List<CT_KhuyenMai> findBySanPham(String maSP) {
         String sql = """
@@ -191,7 +198,8 @@ public class DAO_CT_KhuyenMai {
 
         List<CT_KhuyenMai> list = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        Connection con = ConnectDB.getInstance().getCon();
+        Connection con = ConnectDB.getInstance().getCon(); 
+        if (con == null) return list;
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maSP);
@@ -208,23 +216,23 @@ public class DAO_CT_KhuyenMai {
                     );
 
                     String maSp = rs.getString("maSP");
-                    SanPham sp = new DAO_SanPham().findById(maSp);
+                    SanPham sp = daoSanPham.findById(maSp); 
                     LoaiKM loaiKM = LoaiKM.valueOf(rs.getString("loaiKM"));
 
                     CT_KhuyenMai ctkm = new CT_KhuyenMai(km, sp, rs.getDouble("tiLe"), loaiKM);
-                    ctkm.setLoaiKM(LoaiKM.valueOf(rs.getString("loaiKM")));
                     list.add(ctkm);
                 }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | IllegalArgumentException e) {
             e.printStackTrace();
         }
-        return list;
+        return list; 
     }
 
     public CT_KhuyenMai findBestForProduct(String maSP) {
         List<CT_KhuyenMai> list = findBySanPham(maSP);
         if (list.isEmpty()) return null;
+        
         return list.stream()
                 .max((a, b) -> Double.compare(a.getGiaTri(), b.getGiaTri()))
                 .orElse(null);
