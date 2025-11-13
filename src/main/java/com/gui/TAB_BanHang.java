@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.ArrayList; // added
 
 public class TAB_BanHang extends JPanel {
 
@@ -67,11 +68,16 @@ public class TAB_BanHang extends JPanel {
     private String tenNhanVien = "Nhân viên"; // Có thể set từ bên ngoài
 
     // Hiển thị số tiền khách cần trả sau khi trừ điểm
-    private JLabel lblCanTraValue;
+    private JLabel lblCanTraValue; // vẫn giữ để tính nhưng không hiển thị dòng
     // Nút bỏ dùng điểm
     private JButton btnBoDiem;
     // Hiển thị dự kiến điểm còn lại sau khi dùng
     private JLabel lblDiemConLai;
+
+    // Biến phục vụ điều hướng popup tìm kiếm
+    private List<JMenuItem> searchItems = new ArrayList<>();
+    private int searchSelectedIndex = -1;
+    private String searchPlaceholder = "Tìm sản phẩm (F2)...";
 
     public TAB_BanHang() {
         setLayout(new BorderLayout(10, 10));
@@ -104,6 +110,8 @@ public class TAB_BanHang extends JPanel {
         JTextField txtSearch = new JTextField();
         txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtSearch.setToolTipText("Nhập tên sản phẩm...");
+        // Placeholder init
+        applyPlaceholderBehavior(txtSearch);
         pSearch.add(txtSearch, BorderLayout.CENTER);
         pnlLeft.add(pSearch, BorderLayout.NORTH);
 
@@ -119,18 +127,21 @@ public class TAB_BanHang extends JPanel {
             TimerTask lastTask;
             @Override
             public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN || e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    return; // xử lý ở keyPressed
+                }
                 if (lastTask != null) lastTask.cancel();
                 lastTask = new TimerTask() {
-                    @Override
-                    public void run() {
+                    @Override public void run() {
                         SwingUtilities.invokeLater(() -> {
                             String kw = txtSearch.getText().trim();
                             popupSearch.setVisible(false);
                             popupSearch.removeAll();
-                            if (kw.isEmpty()) {
+                            searchItems.clear();
+                            searchSelectedIndex = -1;
+                            if (kw.isEmpty() || kw.equals(searchPlaceholder)) {
                                 return;
                             }
-
                             List<SanPham> ds = daoSP.findByTen(kw);
                             if (ds.isEmpty()) {
                                 JMenuItem none = new JMenuItem("Không tìm thấy sản phẩm");
@@ -143,7 +154,7 @@ public class TAB_BanHang extends JPanel {
                                     menuItem.setMaximumSize(new Dimension(txtSearch.getWidth(), 60));
                                     menuItem.setBackground(Color.WHITE);
                                     
-                                    // Load icon cho menu item
+                                    // Load icon
                                     ImageIcon icon = null;
                                     try {
                                         String imagePath = sp.getHinhAnhSP();
@@ -156,11 +167,8 @@ public class TAB_BanHang extends JPanel {
                                             }
                                         }
                                     } catch (Exception ignored) {}
-                                    
-                                    if (icon != null) {
-                                        menuItem.setIcon(icon);
-                                    }
-                                    
+                                    if (icon != null) menuItem.setIcon(icon);
+
                                     // Tạo HTML text để hiển thị tên và giá
                                     String htmlText = "<html><div style='padding:5px;'>" +
                                             "<div style='font-weight:bold; font-size:13px;'>" + sp.getTenSP() + "</div>" +
@@ -172,28 +180,78 @@ public class TAB_BanHang extends JPanel {
                                         themSanPham(sp);
                                         popupSearch.setVisible(false);
                                         txtSearch.setText("");
+                                        applyPlaceholderBehavior(txtSearch); // reset placeholder nếu trống
+                                        txtSearch.requestFocusInWindow();
                                     });
                                     popupSearch.add(menuItem);
+                                    searchItems.add(menuItem);
                                 }
                             }
                             popupSearch.pack();
                             popupSearch.show(txtSearch, 0, txtSearch.getHeight());
+                            // chọn mặc định item đầu tiên
+                            if (!searchItems.isEmpty()) {
+                                searchSelectedIndex = 0;
+                                updateSearchSelectionHighlight();
+                            }
                         });
                     }
                 };
                 timer.schedule(lastTask, DELAY);
             }
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (!popupSearch.isVisible() || searchItems.isEmpty()) return;
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    searchSelectedIndex = (searchSelectedIndex + 1) % searchItems.size();
+                    updateSearchSelectionHighlight();
+                    e.consume();
+                } else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    searchSelectedIndex = (searchSelectedIndex - 1 + searchItems.size()) % searchItems.size();
+                    updateSearchSelectionHighlight();
+                    e.consume();
+                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (searchSelectedIndex >= 0 && searchSelectedIndex < searchItems.size()) {
+                        searchItems.get(searchSelectedIndex).doClick();
+                        e.consume();
+                    }
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    popupSearch.setVisible(false);
+                }
+            }
         };
         txtSearch.addKeyListener(searchListener);
+        // F2 key binding to focus search
+        InputMap imF2 = this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap amF2 = this.getActionMap();
+        imF2.put(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0), "focusSearch");
+        amF2.put("focusSearch", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) {
+                txtSearch.requestFocusInWindow();
+                if (txtSearch.getText().equals(searchPlaceholder)) {
+                    txtSearch.setCaretPosition(0);
+                } else {
+                    txtSearch.selectAll();
+                }
+            }
+        });
 
         // Ẩn popup khi txtSearch mất focus
         txtSearch.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
+            @Override public void focusLost(FocusEvent e) {
                 SwingUtilities.invokeLater(() -> {
                     if (!popupSearch.isVisible()) return;
                     popupSearch.setVisible(false);
                 });
+                if (txtSearch.getText().isEmpty()) {
+                    applyPlaceholderBehavior(txtSearch);
+                }
+            }
+            @Override public void focusGained(FocusEvent e) {
+                if (txtSearch.getText().equals(searchPlaceholder)) {
+                    txtSearch.setText("");
+                    txtSearch.setForeground(Color.BLACK);
+                }
             }
         });
 
@@ -512,6 +570,7 @@ public class TAB_BanHang extends JPanel {
         gbc.gridx = 1; pnlTotal.add(lblTongCongValue, gbc);
 
         // Khách cần trả (sau khi trừ điểm)
+        /*
         JLabel lblCanTraRow = new JLabel("Khách cần trả:");
         lblCanTraRow.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblCanTraRow.setForeground(new Color(33, 37, 41));
@@ -520,6 +579,7 @@ public class TAB_BanHang extends JPanel {
         lblCanTraValue.setForeground(new Color(33, 37, 41));
         gbc.gridx = 0; gbc.gridy = 4; pnlTotal.add(lblCanTraRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblCanTraValue, gbc);
+        */
 
         // Nút sử dụng điểm + bỏ dùng điểm
         btnSuDungDiem = new JButton("Sử dụng điểm (F1)");
@@ -533,13 +593,13 @@ public class TAB_BanHang extends JPanel {
         pnlPointBtns.setBackground(pnlTotal.getBackground());
         pnlPointBtns.add(btnSuDungDiem);
         pnlPointBtns.add(btnBoDiem);
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
         pnlTotal.add(pnlPointBtns, gbc);
 
         // Hình thức thanh toán (đẩy xuống)
         JLabel lblHinhThuc = new JLabel("Hình thức:");
         lblHinhThuc.setFont(fLabel);
-        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
         pnlTotal.add(lblHinhThuc, gbc);
         JRadioButton rbCash = new JRadioButton("Tiền mặt", true);
         JRadioButton rbBank = new JRadioButton("Chuyển khoản");
@@ -552,7 +612,7 @@ public class TAB_BanHang extends JPanel {
         pType.add(rbCash); pType.add(rbBank);
         gbc.gridx = 1; pnlTotal.add(pType, gbc);
 
-        // Tiền khách trả & tiền thối (đẩy xuống y: 7 và 8)
+        // Tiền khách trả & tiền thối (đẩy xuống y: 6 và 7)
         lblKhachTraRow = new JLabel("Tiền khách trả:");
         lblKhachTraRow.setFont(fLabel);
         lblTienThoiRow = new JLabel("Tiền thối:");
@@ -565,18 +625,18 @@ public class TAB_BanHang extends JPanel {
         lblTienThoiValue = new JLabel(df.format(0));
         lblTienThoiValue.setFont(fLabel);
 
-        gbc.gridx = 0; gbc.gridy = 7; pnlTotal.add(lblKhachTraRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 6; pnlTotal.add(lblKhachTraRow, gbc);
         gbc.gridx = 1; pnlTotal.add(txtKhachTraField, gbc);
-        gbc.gridx = 0; gbc.gridy = 8; pnlTotal.add(lblTienThoiRow, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; pnlTotal.add(lblTienThoiRow, gbc);
         gbc.gridx = 1; pnlTotal.add(lblTienThoiValue, gbc);
 
-        // --- Mệnh giá --- (đẩy xuống y=9)
+        // --- Mệnh giá --- (đẩy xuống y=8)
         pnlMenhGia = new JPanel(new GridLayout(2, 4, 6, 6));
         pnlMenhGia.setBackground(pnlTotal.getBackground());
         // (Khởi tạo động sau khi có tổng tiền thông qua capNhatTongTien)
-        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
+        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; pnlTotal.add(pnlMenhGia, gbc);
 
-        // Nút hành động (đẩy xuống y=10)
+        // Nút hành động (đẩy xuống y=9)
         JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlButtons.setBackground(pnlTotal.getBackground());
         JButton btnPay = new JButton("Thanh toán");
@@ -585,9 +645,40 @@ public class TAB_BanHang extends JPanel {
         styleButton(btnClear, new Color(220, 53, 69));
         pnlButtons.add(btnPay);
         pnlButtons.add(btnClear);
-        gbc.gridy = 10; gbc.gridx = 0; gbc.gridwidth = 2;
+        gbc.gridy = 9; gbc.gridx = 0; gbc.gridwidth = 2;
         pnlTotal.add(pnlButtons, gbc);
 
+        // === Custom Tab navigation chain ===
+        txtKhachTraField.setFocusTraversalKeysEnabled(false);
+        btnPay.setFocusTraversalKeysEnabled(false);
+        btnClear.setFocusTraversalKeysEnabled(false);
+        txtPhone.setFocusTraversalKeysEnabled(false);
+
+        InputMap imKhachTra = txtKhachTraField.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap amKhachTra = txtKhachTraField.getActionMap();
+        imKhachTra.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "toPay");
+        amKhachTra.put("toPay", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { btnPay.requestFocusInWindow(); } });
+
+        InputMap imPay = btnPay.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap amPay = btnPay.getActionMap();
+        imPay.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "toClear");
+        amPay.put("toClear", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { btnClear.requestFocusInWindow(); } });
+
+        InputMap imClear = btnClear.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap amClear = btnClear.getActionMap();
+        imClear.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "toPhone");
+        amClear.put("toPhone", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { txtPhone.requestFocusInWindow(); } });
+
+        // Optional: Shift+Tab reverse chain
+        imPay.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "backToKhachTra");
+        amPay.put("backToKhachTra", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { txtKhachTraField.requestFocusInWindow(); } });
+        imClear.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "backToPay");
+        amClear.put("backToPay", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { btnPay.requestFocusInWindow(); } });
+        InputMap imPhone = txtPhone.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap amPhone = txtPhone.getActionMap();
+        imPhone.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "backToClear");
+        amPhone.put("backToClear", new AbstractAction() { @Override public void actionPerformed(ActionEvent e) { btnClear.requestFocusInWindow(); } });
+        // === End custom Tab navigation ===
         // Gắn sự kiện
         rbCash.addActionListener(e -> setMenhGiaVisible(true));
         rbBank.addActionListener(e -> setMenhGiaVisible(false));
@@ -917,8 +1008,8 @@ public class TAB_BanHang extends JPanel {
         double tongCong = tongTien + vat;
         lblTongCongValue.setText(df.format(tongCong));
 
-        // Tiền khách cần trả sau khi trừ điểm
-        double tienCanTra = tongCong - tienGiamTuDiem;
+        // Tiền khách cần trả sau khi trừ điểm (vẫn tính nhưng không hiển thị dòng UI)
+        double tienCanTra = tongTien + tongTien * 0.08 - tienGiamTuDiem; // getTongCong() - tienGiamTuDiem
         if (tienCanTra < 0) tienCanTra = 0;
         if (lblCanTraValue != null) lblCanTraValue.setText(df.format(tienCanTra));
 
@@ -1375,6 +1466,26 @@ public class TAB_BanHang extends JPanel {
                                                      boolean isSelected, int row, int column) {
             selectedRow = row;
             return button;
+        }
+    }
+
+    // Highlight lựa chọn hiện tại trong popup tìm kiếm
+    private void updateSearchSelectionHighlight() {
+        for (int i = 0; i < searchItems.size(); i++) {
+            JMenuItem mi = searchItems.get(i);
+            if (i == searchSelectedIndex) {
+                mi.setBackground(new Color(230, 240, 255));
+            } else {
+                mi.setBackground(Color.WHITE);
+            }
+        }
+        popupSearch.repaint();
+    }
+
+    private void applyPlaceholderBehavior(JTextField field) {
+        if (field.getText().isEmpty()) {
+            field.setText(searchPlaceholder);
+            field.setForeground(new Color(160,160,160));
         }
     }
 }

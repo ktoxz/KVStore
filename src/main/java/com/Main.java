@@ -16,19 +16,18 @@ public class Main {
     public static void main(String[] args) {
         try {
             ConnectDB.getInstance().connect();
-            System.out.println("✅ Kết nối CSDL thành công!");
         } catch (SQLException ex) {
             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
                     "Failed to connect to database: " + ex.getMessage(),
                     "DB Connection Error",
                     JOptionPane.ERROR_MESSAGE));
             ex.printStackTrace();
+            
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 ConnectDB.getInstance().disconnect();
-                System.out.println("🔌 Đã ngắt kết nối CSDL.");
             } catch (Exception ignored) {}
         }));
 
