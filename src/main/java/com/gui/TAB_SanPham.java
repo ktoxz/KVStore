@@ -9,6 +9,8 @@ import javax.swing.table.TableColumnModel;
 
 import com.dao.DAO_SanPham;
 import com.entity.SanPham;
+import com.enums.LoaiSP;
+
 
 import java.awt.*;
 import java.awt.event.*;
@@ -40,7 +42,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	// UI
 	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh;
-	JComboBox<String> cboLoai;
+	JComboBox<LoaiSP> cboLoai;
 	JTextArea txtMoTa;
 	JCheckBox chkActive;
 	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh;
@@ -49,7 +51,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	JLabel lblPreview;
 	
 	// Paging (SQL-based)
-	int pageSize = 10, currentPage = 1, totalPages = 1;
+	int pageSize = 10, currentPage = 1, totalPages = 1, totalRows = 0;
+	String currentKeyword = "";
 	JPanel pnlPaging;
 	JLabel lbPageInfo;
 
@@ -57,12 +60,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	// Sizes
 	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
 	
-	// Img Dir
-//	private static final String IMG_DIR = "src/main/resources/sp_image"; 
+	// link dir
+	private static final String IMG_DIR = "src/main/resources/sp_image";
 	
-	//data
-	List<SanPham> dsAll = new ArrayList<>();
-
 
 	public TAB_SanPham() {
 		
@@ -90,7 +90,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		
 		add(split, BorderLayout.CENTER);
 		
-		setTable(dao.getAllSanPham());
+		currentKeyword = "";
+		currentPage = 1;
+		reloadTable();
 		LoadCboLoaiSP();
 		bindEvents();
 		setFormModeNew();
@@ -100,20 +102,14 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 	
 	private void LoadCboLoaiSP() {
-		DefaultComboBoxModel<String> m = new DefaultComboBoxModel<>();
-		List<String> ls = dao.getAllLoaiSanPham();
-		for(String loai : ls) {
-			m.addElement(loai);
-		}
-		cboLoai.setModel(m);
+	    DefaultComboBoxModel<LoaiSP> m = new DefaultComboBoxModel<>();
+	    for (LoaiSP loai : LoaiSP.values()) {
+	        m.addElement(loai);
+	    }
+	    cboLoai.setModel(m);
 	    cboLoai.setSelectedIndex(-1);
 	}
-	
-	private void setTable(List<SanPham> ds) {
-		currentPage = 1;
-		dsAll = ds;
-		reloadTable();
-	}
+
 	
 	// tải bảng và dữ liệu
 	//	maSP, tenSP, giaSP, moTaSP, hinhAnhSP, tinhTrangSP, loaiSP
@@ -121,38 +117,33 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	    mdl.setRowCount(0);
 	    for (SanPham sp : ds) {
 	    	
-//	    	Path p = Paths.get(sp.getHinhAnhSP());
-//	    	if (!p.isAbsolute()) p = Paths.get(IMG_DIR).resolve(p);
-	    	
-	        ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
-	        String giaStr = formatGia(sp.getGiaSP()); // đổi sang String cho khớp getColumnClass
-	        mdl.addRow(new Object[]{
-	            icon,                  // 0: Ảnh (ImageIcon)
-	            sp.getMaSP(),          // 1: Mã
-	            sp.getTenSP(),         // 2: Tên
-	            sp.getMoTaSP(),        // 3: Mô tả
-	            giaStr,                // 4: Giá (String)
-	            sp.getLoaiSP(),        // 5: Loại
-	            sp.isTinhTrangSP() ,   // 6: Hoạt động (Boolean)
-	        });
+	    	ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
+	    	String giaStr = formatGia(sp.getGiaSP()); // đổi sang String cho khớp getColumnClass
+	    	LoaiSP loaiEnum = LoaiSP.fromAny(sp.getLoaiSP());
+	    	Object loaiHienThi = loaiEnum != null ? loaiEnum.toString() : sp.getLoaiSP();
+	    	mdl.addRow(new Object[]{
+	    	    icon,                  // 0: Ảnh (ImageIcon)
+	    	    sp.getMaSP(),          // 1: Mã
+	    	    sp.getTenSP(),         // 2: Tên
+	    	    sp.getMoTaSP(),        // 3: Mô tả
+	    	    giaStr,                // 4: Giá (String)
+	    	    loaiHienThi,           // 5: Loại
+	    	    sp.isTinhTrangSP() ,   // 6: Hoạt động (Boolean)
+	    	});
 	    }
 	}
 	
-	//tải trang hiên tại
+	//tải trang hiên tại (phân trang bằng SQL, không dùng dsAll)
 	private void reloadTable() {
-	    if (dsAll == null) dsAll = dao.getAllSanPham();
+	    totalRows = dao.countSanPham(currentKeyword);
 
-	    totalPages = Math.max(1, (int) Math.ceil(dsAll.size() / (double) pageSize));
+	    totalPages = Math.max(1, (int) Math.ceil(totalRows / (double) pageSize));
 	    if (currentPage < 1) currentPage = 1;
 	    if (currentPage > totalPages) currentPage = totalPages;
 
-	    int from = (currentPage - 1) * pageSize;
-	    int to   = Math.min(from + pageSize, dsAll.size());
-	    if (from < 0) from = 0;
-	    if (to < from) to = from;
-
-	    loadTable(dsAll.subList(from, to));
-	    rebuildPaging(dsAll.size());
+	    List<SanPham> dsPage = dao.getSanPhamPage(currentKeyword, currentPage, pageSize);
+	    loadTable(dsPage);
+	    rebuildPaging(totalRows);
 	}
 
 
@@ -195,18 +186,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	
 	private String nextIdFromDB() {
-	    int next = 1;
-	    for (SanPham sp : dao.getAllSanPham()) {
-	        String id = sp.getMaSP();
-	        if (id != null && id.matches("SP\\d+")) {
-	            int n = Integer.parseInt(id.replaceAll("\\D+", ""));
-	            if (n >= next) next = n + 1;
-	        }
-	    }
-	    return String.format("SP%03d", next);
+	    return dao.getNextMaSanPham();
 	}
-
-	
 	
 	// build các tiểu cấu trúc
 	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
@@ -489,22 +470,19 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	
 	// ====== Helpers ======
 	
-	private void selectLoai(String loai) {
-	    if (loai == null || loai.isBlank()) { 
+	private void selectLoai(String loaiStr) {
+	    if (loaiStr == null || loaiStr.isBlank()) { 
 	        cboLoai.setSelectedIndex(-1); 
 	        return; 
 	    }
-	    loai = loai.trim();
-	    DefaultComboBoxModel<String> m = (DefaultComboBoxModel<String>) cboLoai.getModel();
-	    for (int i = 0; i < m.getSize(); i++) {
-	        if (loai.equalsIgnoreCase(m.getElementAt(i).trim())) {
-	            cboLoai.setSelectedIndex(i);
-	            return;
-	        }
+	    LoaiSP loai = LoaiSP.fromAny(loaiStr);
+	    if (loai == null) {
+	        cboLoai.setSelectedIndex(-1);
+	    } else {
+	        cboLoai.setSelectedItem(loai);
 	    }
-	    m.addElement(loai);            // chưa có thì thêm vào
-	    cboLoai.setSelectedItem(loai); // rồi chọn
 	}
+
 	
 	private void styleButton(JButton b, Color bg, Color fg) {
 		b.setBackground(bg);
@@ -574,20 +552,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private void selectRowById(String id) {
 	    if (id == null || id.isBlank()) return;
 
-	    // tìm index của mã trong dsAll (toàn bộ dữ liệu)
-	    int idx = -1;
-	    for (int i = 0; i < dsAll.size(); i++) {
-	        String ma = String.valueOf(dsAll.get(i).getMaSP());
-	        if (ma != null && id.trim().equalsIgnoreCase(ma.trim())) { idx = i; break; }
+	    // Lấy index của mã trong danh sách đã lọc hiện tại (SQL)
+	    int idx = dao.getIndexById(currentKeyword, id.trim());
+	    if (idx < 0) {
+	        tbl.clearSelection();
+	        return;
 	    }
-	    if (idx < 0) { tbl.clearSelection(); return; }
 
-	    // nhảy tới đúng trang (currentPage là 1-based)
+	    // Tính trang và nạp lại đúng trang
 	    int targetPage = idx / pageSize + 1;
-	    if (currentPage != targetPage) {
-	        currentPage = targetPage;
-	        reloadTable();
-	    }
+	    currentPage = targetPage;
+	    reloadTable();
 
 	    // chọn dòng trong trang
 	    int rowInPage = idx % pageSize;
@@ -637,13 +612,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String moTa = txtMoTa.getText().trim();
 			
 			//loại
-			String loai = (String) cboLoai.getSelectedItem();
-			if (loai == null || loai.trim().isEmpty()) {
+			LoaiSP loaiEnum = (LoaiSP) cboLoai.getSelectedItem();
+			if (loaiEnum == null) {
 			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
 			    cboLoai.requestFocus();
 			    return;
 			}
-			loai = loai.trim();
+			String loai = loaiEnum.toDbValue();
 			
 			// trạng thái
 			boolean active = chkActive.isSelected();
@@ -656,9 +631,10 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			SanPham sp = new SanPham(ma, ten, gia, moTa, path, active, loai);
 			
 			dao.insertSanPham(sp);
-			dsAll.add(sp);
-			
-			reloadTable();
+
+			// Sau khi thêm: bỏ lọc để chắc chắn thấy sản phẩm mới
+			currentKeyword = "";
+			txtSearch.setText("");
 			selectRowById(ma);
 			fillForm(sp);
 			
@@ -689,13 +665,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String moTa = txtMoTa.getText().trim();
 			
 			//loại
-			String loai = (String) cboLoai.getSelectedItem();
-			if (loai == null || loai.trim().isEmpty()) {
+			LoaiSP loaiEnum = (LoaiSP) cboLoai.getSelectedItem();
+			if (loaiEnum == null) {
 			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
 			    cboLoai.requestFocus();
 			    return;
 			}
-			loai = loai.trim();
+			String loai = loaiEnum.toDbValue();
 			
 			//trạng thái
 			boolean active = chkActive.isSelected();
@@ -715,17 +691,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			dao.deleteSanPham(ma);
 			dao.insertSanPham(sp);
 
-			if (dsAll != null) {
-				for (int i = 0; i < dsAll.size(); i++) {
-			        if (ma.equals(String.valueOf(dsAll.get(i).getMaSP()))) {
-			            dsAll.set(i, sp);
-			            break;
-			        }
-			    }
-			}
-			
-			
-			reloadTable();
+			// Sau khi sửa: bỏ lọc, nhảy về sản phẩm vừa sửa
+			currentKeyword = "";
+			txtSearch.setText("");
 			selectRowById(ma);
 			return;
 		}
@@ -749,10 +717,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			    return;
 			}
 			
-			if (dsAll != null) {
-			    dsAll.removeIf(sp -> ma.equals(String.valueOf(sp.getMaSP())));
-			}
-			
+			// Sau khi xoá: reload lại theo filter hiện tại
 			reloadTable();
 			setFormModeNew();
 			JOptionPane.showMessageDialog(this, "Đã xoá thành công!");
@@ -761,56 +726,26 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 		if (o.equals(btnTim) || o.equals(txtSearch)) {
 			String kw = txtSearch.getText().trim();
-			
-			if(kw.isEmpty()) {
-				setTable(dao.getAllSanPham());
-				return;
-			}
-				
-			List<SanPham> dataLs = dao.getAllSanPham();
-			List<SanPham> ans = new ArrayList<SanPham>(); 
-			
-			boolean ok;
-			
-			for(SanPham x : dataLs) {
-				String [] strLs = {
-						x.getMaSP(), 
-						x.getTenSP(), 
-						x.getMoTaSP(), 
-						Double.toString(x.getGiaSP()), 
-						x.isTinhTrangSP() ? "Đang hoạt động" : "Ngừng",
-						x.getLoaiSP(),
-				}; 
-				
-				ok = false;
-				
-				for(String subS : strLs) {
-					if(subS.toLowerCase().contains(kw.toLowerCase())) {
-						ok = true;
-						break;
-					}
-				}
-				
-				if(ok) {
-					ans.add(x);
-				}
-			}
-			
-			setTable(ans);
+			currentKeyword = kw;
+			currentPage = 1;
+			reloadTable();
 			return;
 		}
 
 		if (o.equals(btnChonAnh)) {
-			JFileChooser fc = new JFileChooser();
-			fc.setDialogTitle("Chọn hình ảnh");
-			int ret = fc.showOpenDialog(this);
-			if (ret == JFileChooser.APPROVE_OPTION) {
-				File f = fc.getSelectedFile();
-				txtPathAnh.setText(f.getAbsolutePath());
-				lblPreview.setIcon(scaledOrPlaceholder(f.getAbsolutePath(), PREVIEW_W, PREVIEW_H));
-			}
-			return;
+			JFileChooser fc = new JFileChooser(new File(IMG_DIR));
+		    fc.setDialogTitle("Chọn hình ảnh");
+		    int ret = fc.showOpenDialog(this);
+		    if (ret == JFileChooser.APPROVE_OPTION) {
+		        File f = fc.getSelectedFile();
+
+		        String fileName = f.getName();      // ✅ chỉ lưu tên file
+		        txtPathAnh.setText(fileName);
+		        lblPreview.setIcon(scaledOrPlaceholder(fileName, PREVIEW_W, PREVIEW_H));
+		    }
+		    return;
 		}
+
 		if (o.equals(btnXoaAnh)) {
 			txtPathAnh.setText("");
 			lblPreview.setIcon(scaledOrPlaceholder(null, PREVIEW_W, PREVIEW_H));
@@ -848,19 +783,29 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 
 	// ====== Image utils ======
+	// ====== Image utils ======
 	private ImageIcon scaledOrPlaceholder(String path, int w, int h) {
-		Image img = null;
-		if (path != null && !path.isEmpty()) {
-			File f = new File(path);
-			if (f.exists() && f.isFile()) {
-				ImageIcon raw = new ImageIcon(path);
-				img = raw.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
-			}
-		}
-		if (img == null)
-			img = placeholderImage(w, h, "NO IMAGE");
-		return new ImageIcon(img);
+	    Image img = null;
+	    if (path != null && !path.isEmpty()) {
+
+	        // 1) Thử coi path là đường dẫn tuyệt đối (khi chọn ảnh bằng JFileChooser)
+	        File f = new File(path);
+
+	        // 2) Nếu không tồn tại thì coi path là tên file tương đối, ghép với IMG_DIR (giống TAB_KhuyenMai)
+	        if (!f.exists() || !f.isFile()) {
+	            f = new File(IMG_DIR, path);
+	        }
+
+	        if (f.exists() && f.isFile()) {
+	            ImageIcon raw = new ImageIcon(f.getAbsolutePath());
+	            img = raw.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+	        }
+	    }
+	    if (img == null)
+	        img = placeholderImage(w, h, "NO IMAGE");
+	    return new ImageIcon(img);
 	}
+
 
 	private Image placeholderImage(int w, int h, String text) {
 		BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
