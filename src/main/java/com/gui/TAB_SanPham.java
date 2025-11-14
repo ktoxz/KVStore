@@ -60,6 +60,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	// Sizes
 	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
 	
+	// link dir
+	private static final String IMG_DIR = "src/main/resources/sp_image";
+	
 
 	public TAB_SanPham() {
 		
@@ -730,16 +733,19 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		}
 
 		if (o.equals(btnChonAnh)) {
-			JFileChooser fc = new JFileChooser();
-			fc.setDialogTitle("Chọn hình ảnh");
-			int ret = fc.showOpenDialog(this);
-			if (ret == JFileChooser.APPROVE_OPTION) {
-				File f = fc.getSelectedFile();
-				txtPathAnh.setText(f.getAbsolutePath());
-				lblPreview.setIcon(scaledOrPlaceholder(f.getAbsolutePath(), PREVIEW_W, PREVIEW_H));
-			}
-			return;
+			JFileChooser fc = new JFileChooser(new File(IMG_DIR));
+		    fc.setDialogTitle("Chọn hình ảnh");
+		    int ret = fc.showOpenDialog(this);
+		    if (ret == JFileChooser.APPROVE_OPTION) {
+		        File f = fc.getSelectedFile();
+
+		        String fileName = f.getName();      // ✅ chỉ lưu tên file
+		        txtPathAnh.setText(fileName);
+		        lblPreview.setIcon(scaledOrPlaceholder(fileName, PREVIEW_W, PREVIEW_H));
+		    }
+		    return;
 		}
+
 		if (o.equals(btnXoaAnh)) {
 			txtPathAnh.setText("");
 			lblPreview.setIcon(scaledOrPlaceholder(null, PREVIEW_W, PREVIEW_H));
@@ -777,19 +783,29 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 
 	// ====== Image utils ======
+	// ====== Image utils ======
 	private ImageIcon scaledOrPlaceholder(String path, int w, int h) {
-		Image img = null;
-		if (path != null && !path.isEmpty()) {
-			File f = new File(path);
-			if (f.exists() && f.isFile()) {
-				ImageIcon raw = new ImageIcon(path);
-				img = raw.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
-			}
-		}
-		if (img == null)
-			img = placeholderImage(w, h, "NO IMAGE");
-		return new ImageIcon(img);
+	    Image img = null;
+	    if (path != null && !path.isEmpty()) {
+
+	        // 1) Thử coi path là đường dẫn tuyệt đối (khi chọn ảnh bằng JFileChooser)
+	        File f = new File(path);
+
+	        // 2) Nếu không tồn tại thì coi path là tên file tương đối, ghép với IMG_DIR (giống TAB_KhuyenMai)
+	        if (!f.exists() || !f.isFile()) {
+	            f = new File(IMG_DIR, path);
+	        }
+
+	        if (f.exists() && f.isFile()) {
+	            ImageIcon raw = new ImageIcon(f.getAbsolutePath());
+	            img = raw.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+	        }
+	    }
+	    if (img == null)
+	        img = placeholderImage(w, h, "NO IMAGE");
+	    return new ImageIcon(img);
 	}
+
 
 	private Image placeholderImage(int w, int h, String text) {
 		BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
