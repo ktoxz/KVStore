@@ -172,7 +172,7 @@ public class PDFExportService {
 
         int stt = 1;
         for (CT_HoaDon ct : hoaDon.getChiTietList()) {
-            double donGiaSau = ct.getGiaSP(); // giá sau khuyến mãi (đã lưu)
+            double donGiaSau = ct.getThanhTien(); // giá sau khuyến mãi (đã lưu)
             double donGiaGoc = (ct.getSanPham() != null ? ct.getSanPham().getGiaSP() : donGiaSau);
             int sl = ct.getSoLuong();
             double thanhTienSau = sl * donGiaSau;
@@ -181,7 +181,7 @@ public class PDFExportService {
 
             html.append("<tr>");
             html.append("<td class='text-center'>" + stt++ + "</td>");
-            html.append("<td>" + ct.getTenSP() + "</td>");
+            html.append("<td>" + ct.getSanPham().getTenSP() + "</td>");
             html.append("<td class='text-center'>" + sl + "</td>");
 
             // Đơn giá: chỉ hiển thị giá sau khuyến mãi (không gạch)

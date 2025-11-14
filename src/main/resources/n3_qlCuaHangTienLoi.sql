@@ -185,3 +185,12 @@ VALUES
 (N'SP023', N'Kéo văn phòng 18cm', 15000, N'keo18cm.jpg', N'Kéo lưỡi thép không gỉ', 1, N'DoDungVPPHam'),
 (N'SP024', N'Giấy in A4 Double A 80gsm', 89000, N'giayin_a4.jpg', N'Giấy in chất lượng cao, trắng mịn', 1, N'DoDungVPPHam'),
 (N'SP025', N'Bìa hồ sơ nhựa A4', 6000, N'biahoso_a4.jpg', N'Bìa nhựa trong, bền đẹp', 1, N'DoDungVPPHam');
+
+
+-- Alter
+GO
+ALTER TABLE CT_HoaDon ADD thanhTien FLOAT NULL;
+GO
+ALTER TABLE CT_HoaDon
+    ADD maKM INT NULL
+        FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM);

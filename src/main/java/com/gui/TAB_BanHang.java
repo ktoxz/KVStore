@@ -800,7 +800,7 @@ public class TAB_BanHang extends JPanel {
                         // Lấy giá sau KM để lưu vào hóa đơn
                         double giaSP = getDonGiaSauKhuyenMai(sp);
 
-                        CT_HoaDon chiTiet = new CT_HoaDon(maHD, sp, soLuong, tenSP, giaSP);
+                        CT_HoaDon chiTiet = new CT_HoaDon(hoaDon, sp, soLuong);
                         hoaDon.addChiTiet(chiTiet);
                     }
 

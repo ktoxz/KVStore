@@ -13,9 +13,11 @@ public class KhachHang {
 	public KhachHang() {
 		
 	}
+
 	public KhachHang(String maKH) {
 		this.maKH = maKH;
 	}
+
 	public KhachHang(String maKH, String tenKH, boolean gioiTinh, String sdt, LocalDate ngayTao, int diemTichLuy) {
 		this.maKH = maKH;
 		this.tenKH = tenKH;

@@ -1,68 +1,33 @@
 package com.entity;
 
-import com.dao.DAO_CT_KhuyenMai;
-
 public class CT_HoaDon {
-    private String maHoaDon;
+    private HoaDon hoaDon;
     private SanPham sanPham;
     private int soLuong;
+    private KhuyenMai khuyenMai; // nullable
+    private double thanhTien;    // đã gồm giảm giá
 
-    private String tenSP;
-    private double giaSP;
-
-    public CT_HoaDon() {}
-
-    public CT_HoaDon(String maHoaDon, SanPham sanPham, int soLuong) {
-        this.maHoaDon = maHoaDon;
+    public CT_HoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong) {
+        this.hoaDon = hoaDon;
         this.sanPham = sanPham;
         this.soLuong = soLuong;
+        this.thanhTien = sanPham.getGiaSP() * soLuong; // giá gốc
     }
 
-    public CT_HoaDon(String maHoaDon, SanPham sanPham, int soLuong, String tenSP, double giaSP) {
-        this.maHoaDon = maHoaDon;
+    public CT_HoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong, KhuyenMai km, double thanhTien) {
+        this.hoaDon = hoaDon;
         this.sanPham = sanPham;
         this.soLuong = soLuong;
-        this.tenSP = tenSP;
-        this.giaSP = giaSP;
+        this.khuyenMai = km;
+        this.thanhTien = thanhTien;
     }
 
-    public String getMaHoaDon() { return maHoaDon; }
+    public HoaDon getHoaDon() { return hoaDon; }
     public SanPham getSanPham() { return sanPham; }
-    public void setSanPham(SanPham sanPham) { this.sanPham = sanPham; }
     public int getSoLuong() { return soLuong; }
-    public void setSoLuong(int soLuong) { this.soLuong = soLuong; }
-    public String getTenSP() { return tenSP; }
-    public void setTenSP(String tenSP) { this.tenSP = tenSP; }
-    public double getGiaSP() { return giaSP; }
-    public void setGiaSP(double giaSP) { this.giaSP = giaSP; }
+    public double getThanhTien() { return thanhTien; }
+    public KhuyenMai getKhuyenMai() { return khuyenMai; }
 
-    // Thành tiền gốc
-    public double getThanhTien() {
-        return soLuong * giaSP;
-    }
-
-    // Thành tiền sau khi áp dụng khuyến mãi
-    public double getThanhTienSauKM() {
-        double tong = getThanhTien();
-        try {
-            DAO_CT_KhuyenMai daoKM = new DAO_CT_KhuyenMai();
-            var km = daoKM.findBestForProduct(sanPham.getMaSP());
-            if (km != null) {
-                switch (km.getLoaiKM()) {
-                    case GiamGiaPhanTramSP -> tong -= tong * km.getGiaTri() / 100.0;
-                    case GiamGiaTienSP -> tong -= km.getGiaTri();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return Math.max(tong, 0);
-    }
-
-    @Override
-    public String toString() {
-        return "CT_HoaDon [maHoaDon=" + maHoaDon +
-                ", maSP=" + (sanPham != null ? sanPham.getMaSP() : "null") +
-                ", soLuong=" + soLuong + "]";
-    }
+    public void setKhuyenMai(KhuyenMai km) { this.khuyenMai = km; }
+    public void setThanhTien(double thanhTien) { this.thanhTien = thanhTien; }
 }

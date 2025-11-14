@@ -14,6 +14,7 @@ public class GUI_General extends JPanel {
     private TAB_BanHang tabBanHang;
     private TAB_NhanVien tabNhanVien;
     private TAB_SanPham tabSanPham;
+    private TAB_ManHinhChinh tabManHinhChinh;
 
     public GUI_General() {
         initComponents();
@@ -27,6 +28,7 @@ public class GUI_General extends JPanel {
         tabBanHang = new TAB_BanHang();
         tabNhanVien = new TAB_NhanVien();
         tabSanPham = new TAB_SanPham();
+        tabManHinhChinh = new TAB_ManHinhChinh();
 
 
         // ===== HEADER PANEL (1/5 chiều cao) =====
@@ -75,8 +77,8 @@ public class GUI_General extends JPanel {
         contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(Color.WHITE);
 
-        // Mặc định hiển thị Dashboard
-        showTab(createDashboardTab());
+        // Mặc định hiển thị màn hình chính mới
+        showTab(tabManHinhChinh);
 
         add(contentPanel, BorderLayout.CENTER);
     }
@@ -84,9 +86,9 @@ public class GUI_General extends JPanel {
     private void addTabButtons(JPanel sidebarPanel) {
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Tab Dashboard
-        JButton btnDashboard = createTabButton("Dashboard", "🏠");
-        btnDashboard.addActionListener(e -> showTab(createDashboardTab()));
+        // Tab Màn hình chính (thay thế Dashboard)
+        JButton btnDashboard = createTabButton("Màn hình chính", "🏠");
+        btnDashboard.addActionListener(e -> showTab(tabManHinhChinh));
         sidebarPanel.add(btnDashboard);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -126,19 +128,18 @@ public class GUI_General extends JPanel {
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Bạn có thể thêm các tab khác tại đây
-        // Tab Hướng dẫn
+        // Tab Nhân Viên
         JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
-        btnHuongDan.addActionListener(e -> showTab(tabNhanVien));
+        btnNhanVien.addActionListener(e -> showTab(tabNhanVien));
         sidebarPanel.add(btnNhanVien);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        
+
         // Tab Thống kê
         JButton btnThongKe = createTabButton("Thống kê", "📖");
         btnThongKe.addActionListener(e -> showTab(new TAB_ThongKe()));
         sidebarPanel.add(btnThongKe);
-        
+
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         sidebarPanel.add(Box.createVerticalGlue());
@@ -177,6 +178,10 @@ public class GUI_General extends JPanel {
             contentPanel.remove(currentTabPanel);
         }
 
+        if(tabPanel instanceof TAB_ManHinhChinh) {
+            ((TAB_ManHinhChinh) tabPanel).reloadData();
+        }
+
         // Hiển thị tab mới
         currentTabPanel = tabPanel;
         contentPanel.add(currentTabPanel, BorderLayout.CENTER);
@@ -204,18 +209,6 @@ public class GUI_General extends JPanel {
         }
     }
 
-    private JPanel createDashboardTab() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
-        panel.setBackground(Color.WHITE);
-
-        JLabel lblWelcome = new JLabel("Chào mừng đến với hệ thống quản lý KVStore", SwingConstants.CENTER);
-        lblWelcome.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        lblWelcome.setForeground(new Color(50, 50, 50));
-        panel.add(lblWelcome, BorderLayout.CENTER);
-
-        return panel;
-    }
 
     private void handleLogout() {
         int result = JOptionPane.showConfirmDialog(this,

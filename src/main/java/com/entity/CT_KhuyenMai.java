@@ -8,8 +8,6 @@ public class CT_KhuyenMai {
     private double giaTri;     // % hoặc số tiền giảm
     private LoaiKM loaiKM;     // Enum thay vì String
 
-    public CT_KhuyenMai() {}
-
     public CT_KhuyenMai(KhuyenMai khuyenMai, SanPham sanPham, double giaTri, LoaiKM loaiKM) {
         this.khuyenMai = khuyenMai;
         this.sanPham = sanPham;

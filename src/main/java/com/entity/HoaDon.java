@@ -1,6 +1,9 @@
 package com.entity;
 
+import com.dao.DAO_CT_KhuyenMai;
+import com.dao.DAO_HoaDon;
 import com.dao.DAO_KhachHang;
+import com.dao.DAO_KhuyenMai;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -84,11 +87,25 @@ public class HoaDon {
     }
 
     public List<CT_HoaDon> getChiTietList() {
+        DAO_HoaDon daoHoaDon = new DAO_HoaDon();
+        if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
         return chiTietList;
     }
 
     public void setChiTietList(List<CT_HoaDon> chiTietList) {
+        DAO_HoaDon daoHoaDon = new DAO_HoaDon();
+        if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
         this.chiTietList = chiTietList;
+    }
+
+    public double getTongTien() {
+        DAO_HoaDon daoHoaDon = new DAO_HoaDon();
+        if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
+        double tong = 0;
+        for (CT_HoaDon ct : getChiTietList()) {
+            tong += ct.getThanhTien();
+        }
+        return tong;
     }
 
     public void addChiTiet(CT_HoaDon chiTiet) {

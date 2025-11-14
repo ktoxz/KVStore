@@ -5,6 +5,7 @@ import com.connectDB.ConnectDB;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
 
 public class DAO_SanPham {
 	
@@ -438,5 +439,72 @@ public class DAO_SanPham {
         return "SP001";
     }
 
-    
+    // =========================
+    //  ĐẾM SẢN PHẨM ĐANG KHUYẾN MÃI
+    // =========================
+    public int countSanPhamKhuyenMai() {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return 0;
+
+        String sql = "SELECT COUNT(DISTINCT sp.maSP)" +
+                     " FROM SanPham sp" +
+                     " JOIN CT_KhuyenMai ct ON sp.maSP = ct.maSP" +
+                     " JOIN KhuyenMai km ON ct.maKM = km.maKM" +
+                     " WHERE km.ngayBatDau <= ? AND km.ngayKetThuc >= ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            java.sql.Date today = java.sql.Date.valueOf(LocalDate.now());
+            ps.setDate(1, today);
+            ps.setDate(2, today);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi đếm sản phẩm khuyến mãi: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // =========================
+    //  LẤY 1 TRANG SẢN PHẨM ĐANG KHUYẾN MÃI
+    // =========================
+    public List<SanPham> getSanPhamKhuyenMaiPage(int page, int pageSize) {
+        List<SanPham> ds = new ArrayList<>();
+        Connection con = ConnectDB.getCon();
+        if (con == null) return ds;
+        if (pageSize <= 0) pageSize = 5;
+        if (page <= 0) page = 1;
+        int offset = (page - 1) * pageSize;
+
+        String sql = "SELECT DISTINCT sp.*" +
+                     " FROM SanPham sp" +
+                     " JOIN CT_KhuyenMai ct ON sp.maSP = ct.maSP" +
+                     " JOIN KhuyenMai km ON ct.maKM = km.maKM" +
+                     " WHERE km.ngayBatDau <= ? AND km.ngayKetThuc >= ?" +
+                     " ORDER BY sp.maSP" +
+                     " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            java.sql.Date today = java.sql.Date.valueOf(LocalDate.now());
+            ps.setDate(1, today);
+            ps.setDate(2, today);
+            ps.setInt(3, offset);
+            ps.setInt(4, pageSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ds.add(new SanPham(
+                            rs.getString("maSP"),
+                            rs.getString("tenSP"),
+                            rs.getFloat("giaSP"),
+                            rs.getString("moTaSP"),
+                            rs.getString("hinhAnhSP"),
+                            rs.getBoolean("tinhTrangSP"),
+                            rs.getString("loaiSP")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy trang sản phẩm khuyến mãi: " + e.getMessage());
+        }
+        return ds;
+    }
 }
+

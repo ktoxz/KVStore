@@ -1178,7 +1178,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     private CT_KhuyenMai collectCT() {
         int kmID = Integer.parseInt(txtCT_MaKM.getText().trim());
         String spID = txtCT_MaSP.getText().trim();
-        double tiLe = Double.parseDouble(txtCT_TiLe.getText().trim());
+        float tiLe = Float.parseFloat(txtCT_TiLe.getText().trim());
 
         String loaiKM_Str = String.valueOf(cbCT_LoaiKM.getSelectedItem());
         LoaiKM loaiKM_Enum = getEnumFromDisplayString(loaiKM_Str);
