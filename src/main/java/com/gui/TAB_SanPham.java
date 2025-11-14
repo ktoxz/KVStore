@@ -9,6 +9,8 @@ import javax.swing.table.TableColumnModel;
 
 import com.dao.DAO_SanPham;
 import com.entity.SanPham;
+import com.enums.LoaiSP;
+
 
 import java.awt.*;
 import java.awt.event.*;
@@ -40,7 +42,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	// UI
 	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh;
-	JComboBox<String> cboLoai;
+	JComboBox<LoaiSP> cboLoai;
 	JTextArea txtMoTa;
 	JCheckBox chkActive;
 	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh;
@@ -58,12 +60,6 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	// Sizes
 	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
 	
-	// Img Dir
-//	private static final String IMG_DIR = "src/main/resources/sp_image"; 
-	
-	//data
-//	List<SanPham> dsAll = new ArrayList<>();
-
 
 	public TAB_SanPham() {
 		
@@ -103,14 +99,14 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 	
 	private void LoadCboLoaiSP() {
-		DefaultComboBoxModel<String> m = new DefaultComboBoxModel<>();
-		List<String> ls = dao.getAllLoaiSanPham();
-		for(String loai : ls) {
-			m.addElement(loai);
-		}
-		cboLoai.setModel(m);
+	    DefaultComboBoxModel<LoaiSP> m = new DefaultComboBoxModel<>();
+	    for (LoaiSP loai : LoaiSP.values()) {
+	        m.addElement(loai);
+	    }
+	    cboLoai.setModel(m);
 	    cboLoai.setSelectedIndex(-1);
 	}
+
 	
 	// tải bảng và dữ liệu
 	//	maSP, tenSP, giaSP, moTaSP, hinhAnhSP, tinhTrangSP, loaiSP
@@ -118,20 +114,19 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	    mdl.setRowCount(0);
 	    for (SanPham sp : ds) {
 	    	
-//	    	Path p = Paths.get(sp.getHinhAnhSP());
-//	    	if (!p.isAbsolute()) p = Paths.get(IMG_DIR).resolve(p);
-	    	
-	        ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
-	        String giaStr = formatGia(sp.getGiaSP()); // đổi sang String cho khớp getColumnClass
-	        mdl.addRow(new Object[]{
-	            icon,                  // 0: Ảnh (ImageIcon)
-	            sp.getMaSP(),          // 1: Mã
-	            sp.getTenSP(),         // 2: Tên
-	            sp.getMoTaSP(),        // 3: Mô tả
-	            giaStr,                // 4: Giá (String)
-	            sp.getLoaiSP(),        // 5: Loại
-	            sp.isTinhTrangSP() ,   // 6: Hoạt động (Boolean)
-	        });
+	    	ImageIcon icon = scaledOrPlaceholder(sp.getHinhAnhSP(), THUMB_W, THUMB_H);
+	    	String giaStr = formatGia(sp.getGiaSP()); // đổi sang String cho khớp getColumnClass
+	    	LoaiSP loaiEnum = LoaiSP.fromAny(sp.getLoaiSP());
+	    	Object loaiHienThi = loaiEnum != null ? loaiEnum.toString() : sp.getLoaiSP();
+	    	mdl.addRow(new Object[]{
+	    	    icon,                  // 0: Ảnh (ImageIcon)
+	    	    sp.getMaSP(),          // 1: Mã
+	    	    sp.getTenSP(),         // 2: Tên
+	    	    sp.getMoTaSP(),        // 3: Mô tả
+	    	    giaStr,                // 4: Giá (String)
+	    	    loaiHienThi,           // 5: Loại
+	    	    sp.isTinhTrangSP() ,   // 6: Hoạt động (Boolean)
+	    	});
 	    }
 	}
 	
@@ -472,22 +467,19 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	
 	// ====== Helpers ======
 	
-	private void selectLoai(String loai) {
-	    if (loai == null || loai.isBlank()) { 
+	private void selectLoai(String loaiStr) {
+	    if (loaiStr == null || loaiStr.isBlank()) { 
 	        cboLoai.setSelectedIndex(-1); 
 	        return; 
 	    }
-	    loai = loai.trim();
-	    DefaultComboBoxModel<String> m = (DefaultComboBoxModel<String>) cboLoai.getModel();
-	    for (int i = 0; i < m.getSize(); i++) {
-	        if (loai.equalsIgnoreCase(m.getElementAt(i).trim())) {
-	            cboLoai.setSelectedIndex(i);
-	            return;
-	        }
+	    LoaiSP loai = LoaiSP.fromAny(loaiStr);
+	    if (loai == null) {
+	        cboLoai.setSelectedIndex(-1);
+	    } else {
+	        cboLoai.setSelectedItem(loai);
 	    }
-	    m.addElement(loai);            // chưa có thì thêm vào
-	    cboLoai.setSelectedItem(loai); // rồi chọn
 	}
+
 	
 	private void styleButton(JButton b, Color bg, Color fg) {
 		b.setBackground(bg);
@@ -617,13 +609,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String moTa = txtMoTa.getText().trim();
 			
 			//loại
-			String loai = (String) cboLoai.getSelectedItem();
-			if (loai == null || loai.trim().isEmpty()) {
+			LoaiSP loaiEnum = (LoaiSP) cboLoai.getSelectedItem();
+			if (loaiEnum == null) {
 			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
 			    cboLoai.requestFocus();
 			    return;
 			}
-			loai = loai.trim();
+			String loai = loaiEnum.toDbValue();
 			
 			// trạng thái
 			boolean active = chkActive.isSelected();
@@ -670,13 +662,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			String moTa = txtMoTa.getText().trim();
 			
 			//loại
-			String loai = (String) cboLoai.getSelectedItem();
-			if (loai == null || loai.trim().isEmpty()) {
+			LoaiSP loaiEnum = (LoaiSP) cboLoai.getSelectedItem();
+			if (loaiEnum == null) {
 			    JOptionPane.showMessageDialog(this, "Chưa chọn loại sản phẩm!");
 			    cboLoai.requestFocus();
 			    return;
 			}
-			loai = loai.trim();
+			String loai = loaiEnum.toDbValue();
 			
 			//trạng thái
 			boolean active = chkActive.isSelected();

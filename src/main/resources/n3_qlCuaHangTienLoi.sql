@@ -65,7 +65,7 @@ INSERT INTO LoaiSanPham VALUES
                             (N'DoAn'),
                             (N'NuocUong'),
                             (N'VatDungSinhHoat'),
-                            (N'DoDungVPPHam'),
+                            (N'DoDungVPPham'),
                             (N'ThucPhamDongLanh');
 
 -- ============================================
