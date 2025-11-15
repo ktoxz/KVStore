@@ -9,23 +9,6 @@ import java.util.List;
 
 public class DAO_KhuyenMai {
 
-    public List<String> findAllLoaiKM() {
-        List<String> list = new ArrayList<>();
-        String sql = "SELECT * FROM LoaiKM";
-        Connection con = ConnectDB.getInstance().getCon(); // Lấy kết nối static
-        if (con == null) return list;
-
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(rs.getString("loaiKM"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list; // Không đóng con
-    }
-
     public List<KhuyenMai> findAll() {
         List<KhuyenMai> list = new ArrayList<>();
         String sql = "SELECT * FROM KhuyenMai ORDER BY maKM DESC";

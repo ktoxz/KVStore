@@ -302,7 +302,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             String ngay = d != null
                     ? d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                     : "";
-            String chucVuStr = nv.getChucVu();
+            String chucVuStr = nv.getChucVu().toString();
 
             mdl.addRow(new Object[] {
                     nv.getMaNV(),
@@ -359,7 +359,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             dcNgayTao.setDate(null);
         }
 
-        ChucVu cv = ChucVu.fromAny(nv.getChucVu());
+        ChucVu cv = nv.getChucVu();
         if (cv != null) {
             cboChucVu.setSelectedItem(cv);
         } else {
@@ -380,7 +380,6 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
                 : java.time.LocalDate.now();
 
         ChucVu cv = (ChucVu) cboChucVu.getSelectedItem();
-        String chucVuStr = cv != null ? cv.toDbValue() : null;
 
         if (ten.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Tên nhân viên không được rỗng!");
@@ -393,7 +392,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             return null;
         }
 
-        return new NhanVien(ma, ten, gioiTinh, email, sdt, ngay, chucVuStr);
+        return new NhanVien(ma, ten, gioiTinh, email, sdt, ngay, cv);
     }
 
 

@@ -57,11 +57,11 @@ public class TAB_ManHinhChinh extends JPanel {
         if (nv != null) {
             this.maNhanVien = nv.getMaNV();
             this.tenNhanVien = nv.getTenNV();
-            lblMaNhanVien.setText("Mã nhân viên: " + nv.getMaNV());
-            lblTenNhanVien.setText("Tên nhân viên: " + nv.getTenNV());
-            lblEmail.setText("Email: " + (nv.getEmail() != null ? nv.getEmail() : "-"));
-            lblSdt.setText("SĐT: " + (nv.getSdt() != null ? nv.getSdt() : "-"));
-            lblChucVu.setText("Chức vụ: " + (nv.getChucVu() != null ? nv.getChucVu() : "-"));
+            lblMaNhanVien.setText(nv.getMaNV());
+            lblTenNhanVien.setText(nv.getTenNV());
+            lblEmail.setText((nv.getEmail() != null ? nv.getEmail() : "-"));
+            lblSdt.setText((nv.getSdt() != null ? nv.getSdt() : "-"));
+            lblChucVu.setText((nv.getChucVu() != null ? nv.getChucVu().toString() : "-"));
         }
         reloadData();
     }
@@ -94,83 +94,53 @@ public class TAB_ManHinhChinh extends JPanel {
     private JPanel buildLeftInfoPanel() {
         JPanel card = createCardPanel();
 
+        // Title
         JLabel title = new JLabel("Thông tin nhân viên");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        title.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        // ======= Avatar tròn =======
-        JPanel avatarPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.setColor(new Color(220, 220, 220));
-                g.fillOval(0, 0, getWidth(), getHeight());
-
-                g.setColor(Color.DARK_GRAY);
-                g.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-                String txt = "Avatar";
-                FontMetrics fm = g.getFontMetrics();
-                g.drawString(txt, (getWidth() - fm.stringWidth(txt)) / 2,
-                        (getHeight() + fm.getAscent()) / 2 - 3);
-            }
-        };
-        avatarPanel.setPreferredSize(new Dimension(80, 80));
-        avatarPanel.setMaximumSize(new Dimension(80, 80));
-
-        // ======= Panel chứa avatar =======
-        JPanel avatarWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        avatarWrapper.setOpaque(false);
-        avatarWrapper.add(avatarPanel);
-
-        // ======= Tạo các dòng thông tin đẹp mắt =======
+        // Main info panel
         JPanel infoPanel = new JPanel();
         infoPanel.setOpaque(false);
         infoPanel.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(3, 0, 3, 0);
+        gbc.insets = new Insets(6, 0, 6, 0);
         gbc.anchor = GridBagConstraints.LINE_START;
         gbc.gridx = 0;
         gbc.gridy = 0;
 
-        // Label bold (Tên trường)
-        // Value màu đậm – dễ nhìn
-        infoPanel.add(buildInfoRow("Tên nhân viên:", lblTenNhanVien = new JLabel("-")), gbc); gbc.gridy++;
-        infoPanel.add(buildInfoRow("Mã nhân viên:", lblMaNhanVien = new JLabel("-")), gbc); gbc.gridy++;
-        infoPanel.add(buildInfoRow("Email:", lblEmail = new JLabel("-")), gbc); gbc.gridy++;
-        infoPanel.add(buildInfoRow("SĐT:", lblSdt = new JLabel("-")), gbc); gbc.gridy++;
-        infoPanel.add(buildInfoRow("Chức vụ:", lblChucVu = new JLabel("-")), gbc); gbc.gridy++;
-
-        // ======= Layout trái – phải =======
-        JPanel content = new JPanel(new BorderLayout(10, 0));
-        content.setOpaque(false);
-        content.add(avatarWrapper, BorderLayout.WEST);
-        content.add(infoPanel, BorderLayout.CENTER);
+        // Beautiful row builder
+        infoPanel.add(buildInfoRowNoAvatar("Tên nhân viên:", lblTenNhanVien = new JLabel("-"), true), gbc); gbc.gridy++;
+        infoPanel.add(buildInfoRowNoAvatar("Mã nhân viên:", lblMaNhanVien = new JLabel("-"), false), gbc); gbc.gridy++;
+        infoPanel.add(buildInfoRowNoAvatar("Email:", lblEmail = new JLabel("-"), false), gbc); gbc.gridy++;
+        infoPanel.add(buildInfoRowNoAvatar("SĐT:", lblSdt = new JLabel("-"), false), gbc); gbc.gridy++;
+        infoPanel.add(buildInfoRowNoAvatar("Chức vụ:", lblChucVu = new JLabel("-"), false), gbc); gbc.gridy++;
 
         card.add(title, BorderLayout.NORTH);
-        card.add(content, BorderLayout.CENTER);
+        card.add(infoPanel, BorderLayout.CENTER);
 
         return card;
     }
 
 
-    private JLabel infoLabel(String text) {
-        JLabel lb = new JLabel(text);
-        lb.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        lb.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-        return lb;
-    }
-
-    private JPanel buildInfoRow(String labelText, JLabel valueLabel) {
+    private JPanel buildInfoRowNoAvatar(String labelText, JLabel valueLabel, boolean highlightName) {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         row.setOpaque(false);
 
         JLabel label = new JLabel(labelText);
         label.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        label.setForeground(new Color(60, 60, 60));
+        label.setForeground(new Color(55, 55, 55));
 
-        valueLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        valueLabel.setForeground(new Color(30, 30, 30));
+        if (highlightName) {
+            // Tên nhân viên: nổi bật hơn
+            valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            valueLabel.setForeground(new Color(30, 30, 30));
+        } else {
+            valueLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            valueLabel.setForeground(new Color(40, 40, 40));
+        }
+
         valueLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 
         row.add(label);

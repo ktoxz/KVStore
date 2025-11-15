@@ -416,7 +416,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     }
 
     private JScrollPane buildTableCT() {
-        String[] colsCT = {"Mã SP", "Mã KM", "Loại CT", "Tỉ lệ"};
+        String[] colsCT = {"Mã SP", "Mã KM", "Loại CT", "Giá trị"};
         mdlCT = new DefaultTableModel(colsCT, 0) {
             public boolean isCellEditable(int r, int c) {
                 return false;
@@ -446,9 +446,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     double tiLe = (Double) value;
 
                     if (loaiKM_Str.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
-                        NumberFormat percentFormat = NumberFormat.getPercentInstance();
-                        percentFormat.setMaximumFractionDigits(1);
-                        ((JLabel) c).setText(percentFormat.format(tiLe));
+                        ((JLabel) c).setText(tiLe + " %");
                     } else {
                         ((JLabel) c).setText(formatGia(tiLe));
                     }
@@ -555,7 +553,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 cbCT_LoaiKM.addItem(loai.toString()); 
             }
         } catch (Exception ex) {
-            msg("Lỗi tải LoạiKM: " + ex.getMessage());
+            msg("Lỗi tải Loại KM: " + ex.getMessage());
         }
     }
 
@@ -1140,8 +1138,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
         String loaiKM_Str = String.valueOf(cbCT_LoaiKM.getSelectedItem());
         if (loaiKM_Str.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
-            if (tl > 1) {
-                msg("Giá trị Phần trăm phải từ 0 đến 1 (ví dụ: 0.1 cho 10%)");
+            if (tl > 100 || tl <= 0) {
+                msg("Giá trị Phần trăm phải từ 1 đến 100");
                 txtCT_TiLe.requestFocus();
                 return false;
             }
@@ -1242,7 +1240,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         String selected = String.valueOf(cbCT_LoaiKM.getSelectedItem());
 
         if (selected.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
-            lbCT_TiLe.setText("Phần trăm (0.0 - 1.0):");
+            lbCT_TiLe.setText("Phần trăm (0-100):");
         } else if (selected.equals(LoaiKM.GiamGiaTienSP.toString())) {
             lbCT_TiLe.setText("Giá trị (VNĐ):");
         } else {

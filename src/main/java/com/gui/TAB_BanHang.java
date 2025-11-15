@@ -146,7 +146,7 @@ public class TAB_BanHang extends JPanel {
                             if (kw.isEmpty() || kw.equals(searchPlaceholder)) {
                                 return;
                             }
-                            List<SanPham> ds = daoSP.findByTen(kw);
+                            List<SanPham> ds = daoSP.searchByNameOrMa(kw, 10);
                             if (ds.isEmpty()) {
                                 JMenuItem none = new JMenuItem("Không tìm thấy sản phẩm");
                                 none.setEnabled(false);
@@ -1463,10 +1463,14 @@ public class TAB_BanHang extends JPanel {
             button.setToolTipText("Xóa sản phẩm khỏi giỏ hàng");
             button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             button.addActionListener(e -> {
+                if (table.isEditing()) {
+                    table.getCellEditor().stopCellEditing();
+                }
                 mdlTable.removeRow(selectedRow);
                 capNhatSTT();
                 capNhatTongTien();
             });
+
         }
 
         public Component getTableCellEditorComponent(JTable table, Object value,

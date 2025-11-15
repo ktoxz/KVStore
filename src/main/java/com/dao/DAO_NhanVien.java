@@ -11,6 +11,7 @@ import java.util.List;
 
 import com.connectDB.ConnectDB;
 import com.entity.NhanVien;
+import com.enums.ChucVu;
 import com.service.EmailService;
 
 public class DAO_NhanVien {
@@ -42,7 +43,8 @@ public class DAO_NhanVien {
                 String sdt = rs.getString(6);
                 LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                 String chucVu = rs.getString(8);
-                nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chucVu);
+                ChucVu chuc = ChucVu.valueOf(chucVu);
+                nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chuc);
             }
 
             rs.close();
@@ -78,7 +80,8 @@ public class DAO_NhanVien {
                 String sdt = rs.getString(6);
                 LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                 String chucVu = rs.getString(8);
-                NhanVien nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chucVu);
+                ChucVu chuc = ChucVu.valueOf(chucVu);
+                NhanVien nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chuc);
                 ls.add(nv);
             }
 
@@ -155,8 +158,8 @@ public class DAO_NhanVien {
                     String sdt = rs.getString(6);
                     LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                     String chucVu = rs.getString(8);
-
-                    ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu));
+                    ChucVu chuc = ChucVu.valueOf(chucVu);
+                    ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chuc));
                 }
             }
         } catch (SQLException e) {
@@ -236,7 +239,7 @@ public class DAO_NhanVien {
 			if (d == null) d = LocalDate.now();
 			ps.setDate(6, java.sql.Date.valueOf(d));
 
-			ps.setString(7, nv.getChucVu());
+			ps.setString(7, nv.getChucVu().toDbValue());
 			ps.setString(8, matKhauKichHoat);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
@@ -264,7 +267,7 @@ public class DAO_NhanVien {
             if (d == null) d = LocalDate.now();
             ps.setDate(5, java.sql.Date.valueOf(d));
 
-            ps.setString(6, nv.getChucVu());
+            ps.setString(6, nv.getChucVu().toDbValue());
             ps.setString(7, nv.getMaNV());
 
             return ps.executeUpdate() > 0;
@@ -292,7 +295,8 @@ public class DAO_NhanVien {
                     String sdt = rs.getString("sdt");
                     LocalDate ngayTaoTaiKhoan = rs.getDate("ngayTaoTaiKhoan").toLocalDate();
                     String chucVu = rs.getString("chucVu");
-                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu);
+                    ChucVu chuc = ChucVu.valueOf(chucVu);
+                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chuc);
                 }
             }
         } catch (SQLException e) {
@@ -374,7 +378,9 @@ public class DAO_NhanVien {
                     String chucVu = rs.getString("chucVu");
 
                     // Trả về NhanVien như cũ – GUI sẽ kiểm tra có đang dùng mật khẩu kích hoạt hay không
-                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu);
+                    ChucVu chuc = ChucVu.valueOf(chucVu);
+
+                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chuc);
                 }
             }
         } catch (SQLException e) {

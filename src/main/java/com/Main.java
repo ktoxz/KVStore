@@ -35,36 +35,7 @@ public class Main {
             UIManager.setLookAndFeel(new FlatMacLightLaf());
         } catch (Exception ignored) {}
 
-        try {
-            DAO_SanPham daoSP = new DAO_SanPham();
-            DAO_CT_KhuyenMai daoKM = new DAO_CT_KhuyenMai();
 
-            List<SanPham> sps = daoSP.getAllSanPham();
-
-            System.out.println("=== 🛒 Danh sách sản phẩm có khuyến mãi ===");
-            for (SanPham sp : sps) {
-                try {
-                    List<CT_KhuyenMai> kms = daoKM.findBySanPham(sp.getMaSP());
-                    if (!kms.isEmpty()) {
-                        System.out.println("➡️ " + sp.getMaSP() + " - " + sp.getTenSP());
-                        for (CT_KhuyenMai km : kms) {
-                            System.out.printf("   • KM: %-25s | Loại: %-20s | Giá trị: %.2f%n",
-                                    km.getKhuyenMai().getTenKM(),
-                                    km.getLoaiKM(),
-                                    km.getGiaTri());
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    System.err.println("⚠️ Lỗi khi truy vấn KM cho SP " + sp.getMaSP() + ": " + e.getMessage());
-                }
-            }
-            System.out.println("==========================================");
-
-        } catch (Exception e) {
-            System.err.println("⚠️ Lỗi debug khuyến mãi: " + e.getMessage());
-            e.printStackTrace();
-        }
 
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("KVStore - Đăng nhập");
