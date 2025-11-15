@@ -15,6 +15,7 @@ import java.awt.event.*;
 
 import com.dao.DAO_NhanVien;
 import com.entity.NhanVien;
+import com.service.EmailService;
 import com.toedter.calendar.JDateChooser;
 
 public class TAB_NhanVien extends JPanel implements ActionListener, MouseListener {
@@ -437,7 +438,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             nv.setMaNV(maMoi);
             txtMaNV.setText(maMoi);  // hiển thị lại lên form
 
-            if (!dao.insertNhanVien(nv)) {
+            if (!dao.insertNhanVien(nv, EmailService.generateActivationCode(5))) {
                 JOptionPane.showMessageDialog(this, "Thêm nhân viên thất bại!");
                 return;
             }
@@ -524,15 +525,16 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
     @Override
     public void mouseExited(MouseEvent e) {}
 
-    // Demo nhanh (tuỳ chọn)
-//    public static void main(String[] args) {
-//        SwingUtilities.invokeLater(() -> {
-//            JFrame f = new JFrame("QL Nhân viên");
-//            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//            f.setContentPane(new TAB_NhanVien());
-//            f.setSize(1140, 660);
-//            f.setLocationRelativeTo(null);
-//            f.setVisible(true);
-//        });
-//    }
+    public String createRandomPassword(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*!";
+        StringBuilder password = new StringBuilder();
+        java.util.Random rnd = new java.util.Random();
+        for (int i = 0; i < length; i++) {
+            int index = rnd.nextInt(chars.length());
+            password.append(chars.charAt(index));
+        }
+        return password.toString();
+    }
 }
+
+

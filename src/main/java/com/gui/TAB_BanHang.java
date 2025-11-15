@@ -63,9 +63,8 @@ public class TAB_BanHang extends JPanel {
     private JButton btnSuDungDiem;
     private KhachHang currentCustomer = null;
 
-    // Thông tin nhân viên đăng nhập (mặc định, cần truyền từ GUI_Login)
-    private String maNhanVien = "NV00000001"; // Có thể set từ bên ngoài
-    private String tenNhanVien = "Nhân viên"; // Có thể set từ bên ngoài
+    // Thông tin nhân viên đăng nhập (nhận từ GUI_General)
+    private NhanVien nhanVien;
 
     // Hiển thị số tiền khách cần trả sau khi trừ điểm
     private JLabel lblCanTraValue; // vẫn giữ để tính nhưng không hiển thị dòng
@@ -80,6 +79,11 @@ public class TAB_BanHang extends JPanel {
     private String searchPlaceholder = "Tìm sản phẩm (F2)...";
 
     public TAB_BanHang() {
+        this(null);
+    }
+
+    public TAB_BanHang(NhanVien nhanVien) {
+        this.nhanVien = nhanVien;
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -573,7 +577,6 @@ public class TAB_BanHang extends JPanel {
         /*
         JLabel lblCanTraRow = new JLabel("Khách cần trả:");
         lblCanTraRow.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        lblCanTraRow.setForeground(new Color(33, 37, 41));
         lblCanTraValue = new JLabel(df.format(0));
         lblCanTraValue.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblCanTraValue.setForeground(new Color(33, 37, 41));
@@ -757,13 +760,12 @@ public class TAB_BanHang extends JPanel {
 
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
-                    // Lấy mã nhân viên từ database
-                    NhanVien nv = daoStaff.getFirstNV();
-                    if (nv == null) {
+                    // Không còn dùng DAO_NhanVien.getFirstNV(), luôn dùng nhân viên đăng nhập
+                    if (nhanVien == null) {
                         JOptionPane.showMessageDialog(this,
-                            "Không tìm thấy nhân viên trong hệ thống!\nVui lòng thêm nhân viên trước khi thanh toán.",
-                            "Lỗi",
-                            JOptionPane.ERROR_MESSAGE);
+                                "Không có thông tin nhân viên đăng nhập!",
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -789,7 +791,8 @@ public class TAB_BanHang extends JPanel {
                         hoaDon.setKhachHang("KH00000000");
                     }
 
-                    hoaDon.setNhanVien(new DAO_NhanVien().getFirstNV()); // Sử dụng mã nhân viên từ database
+                    // Gán đúng nhân viên đăng nhập cho hóa đơn
+                    hoaDon.setNhanVien(nhanVien);
 
                     // Thêm chi tiết hóa đơn
                     for (int i = 0; i < mdlTable.getRowCount(); i++) {
@@ -825,7 +828,7 @@ public class TAB_BanHang extends JPanel {
                         String pdfPath = PDFExportService.xuatHoaDonPDF(
                             hoaDon,
                             currentCustomer,
-                            tenNhanVien,
+                            nhanVien.getTenNV(),
                             tienGiamTuDiem,
                             diemDaSuDung
                         );
@@ -922,6 +925,10 @@ public class TAB_BanHang extends JPanel {
         // Khởi tạo mặc định
         txtName.setText("Khách vãng lai");
         txtDiem.setText("0");
+    }
+
+    public void setNhanVien(NhanVien nv) {
+        this.nhanVien = nv;
     }
 
     private void styleButton(JButton btn, Color color) {
