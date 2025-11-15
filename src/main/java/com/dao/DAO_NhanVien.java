@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.connectDB.ConnectDB;
 import com.entity.NhanVien;
+import com.enums.ChucVu;
 
 public class DAO_NhanVien {
     /**
@@ -91,79 +92,102 @@ public class DAO_NhanVien {
         return ls;
     }
     
-    // =========================
-    //  ĐẾM NHÂN VIÊN (TÌM THEO SĐT)
-    // =========================
+	// =========================
+	//  ĐẾM NHÂN VIÊN (TÌM THEO NHIỀU TRƯỜNG)
+	// =========================
     public int countNhanVien(String keyword) {
-        Connection con = ConnectDB.getCon();
-        if (con == null) return 0;
+	    Connection con = ConnectDB.getCon();
+	    if (con == null) return 0;
+	
+	    boolean hasKw = keyword != null && !keyword.trim().isEmpty();
+	    StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM NhanVien");
+	    if (hasKw) {
+	    	sql.append(" WHERE (maNV LIKE ?")
+	    	   .append(" OR tenNV LIKE ?")
+	    	   .append(" OR sdt LIKE ?")
+	    	   .append(" OR email LIKE ?")
+	    	   .append(" OR CONVERT(varchar(10), ngayTaoTaiKhoan, 120) LIKE ?")
+	    	   .append(" OR chucVu LIKE ?)");
+	    }
+	
+	    try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+	        if (hasKw) {
+	        	String kw = "%" + keyword.trim() + "%";
+	        	int idx = 1;
+	        	ps.setString(idx++, kw); // maNV
+	        	ps.setString(idx++, kw); // tenNV
+	        	ps.setString(idx++, kw); // sdt
+	        	ps.setString(idx++, kw); // email
+	        	ps.setString(idx++, kw); // ngayTaoTaiKhoan
+	        	ps.setString(idx++, kw); // chucVu
+	        }
+	        try (ResultSet rs = ps.executeQuery()) {
+	            if (rs.next()) return rs.getInt(1);
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Lỗi khi đếm nhân viên: " + e.getMessage());
+	    }
+	    return 0;
+	}
 
-        boolean hasKw = keyword != null && !keyword.trim().isEmpty();
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM NhanVien");
-        if (hasKw) {
-            sql.append(" WHERE sdt LIKE ?");
-        }
 
-        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
-            if (hasKw) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(1, kw);
-            }
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi đếm nhân viên: " + e.getMessage());
-        }
-        return 0;
-    }
+	// =========================
+	//  LẤY 1 TRANG NHÂN VIÊN (PHÂN TRANG + TÌM THEO NHIỀU TRƯỜNG)
+	// =========================
+	public List<NhanVien> getNhanVienPage(String keyword, int page, int pageSize) {
+	    List<NhanVien> ds = new ArrayList<>();
+	    Connection con = ConnectDB.getCon();
+	    if (con == null) return ds;
+	
+	    boolean hasKw = keyword != null && !keyword.trim().isEmpty();
+	    StringBuilder sql = new StringBuilder("SELECT * FROM NhanVien");
+	    if (hasKw) {
+	    	sql.append(" WHERE (maNV LIKE ?")
+	    	   .append(" OR tenNV LIKE ?")
+	    	   .append(" OR sdt LIKE ?")
+	    	   .append(" OR email LIKE ?")
+	    	   .append(" OR CONVERT(varchar(10), ngayTaoTaiKhoan, 120) LIKE ?")
+	    	   .append(" OR chucVu LIKE ?)");
+	    }
+	    sql.append(" ORDER BY maNV OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+	
+	    if (pageSize <= 0) pageSize = 10;
+	    if (page <= 0) page = 1;
+	    int offset = (page - 1) * pageSize;
+	
+	    try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+	        int idx = 1;
+	        if (hasKw) {
+	        	String kw = "%" + keyword.trim() + "%";
+	        	ps.setString(idx++, kw); // maNV
+	        	ps.setString(idx++, kw); // tenNV
+	        	ps.setString(idx++, kw); // sdt
+	        	ps.setString(idx++, kw); // email
+	        	ps.setString(idx++, kw); // ngayTaoTaiKhoan
+	        	ps.setString(idx++, kw); // chucVu
+	        }
+	        ps.setInt(idx++, offset);
+	        ps.setInt(idx, pageSize);
+	
+	        try (ResultSet rs = ps.executeQuery()) {
+	            while (rs.next()) {
+	                String maNV = rs.getString(1);
+	                String tenNV = rs.getString(2);
+	                boolean gioiTinh = rs.getBoolean(4);
+	                String email = rs.getString(5);
+	                String sdt = rs.getString(6);
+	                LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
+	                String chucVu = ChucVu.fromAny(rs.getString(8)).toString();
+	
+	                ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu));
+	            }
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Lỗi khi lấy trang nhân viên: " + e.getMessage());
+	    }
+	    return ds;
+	}
 
-    // =========================
-    //  LẤY 1 TRANG NHÂN VIÊN (PHÂN TRANG + TÌM THEO SĐT)
-    // =========================
-    public List<NhanVien> getNhanVienPage(String keyword, int page, int pageSize) {
-        List<NhanVien> ds = new ArrayList<>();
-        Connection con = ConnectDB.getCon();
-        if (con == null) return ds;
-
-        boolean hasKw = keyword != null && !keyword.trim().isEmpty();
-        StringBuilder sql = new StringBuilder("SELECT * FROM NhanVien");
-        if (hasKw) {
-            sql.append(" WHERE sdt LIKE ?");
-        }
-        sql.append(" ORDER BY maNV OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
-
-        if (pageSize <= 0) pageSize = 10;
-        if (page <= 0) page = 1;
-        int offset = (page - 1) * pageSize;
-
-        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
-            int idx = 1;
-            if (hasKw) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(idx++, kw);
-            }
-            ps.setInt(idx++, offset);
-            ps.setInt(idx, pageSize);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    String maNV = rs.getString(1);
-                    String tenNV = rs.getString(2);
-                    boolean gioiTinh = rs.getBoolean(4);
-                    String email = rs.getString(5);
-                    String sdt = rs.getString(6);
-                    LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
-                    String chucVu = rs.getString(8);
-
-                    ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu));
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi lấy trang nhân viên: " + e.getMessage());
-        }
-        return ds;
-    }
     
     // =========================
     //  SINH MÃ NHÂN VIÊN MỚI

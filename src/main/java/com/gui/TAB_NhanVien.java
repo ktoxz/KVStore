@@ -12,6 +12,7 @@ import com.enums.ChucVu;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 
 import com.dao.DAO_NhanVien;
 import com.entity.NhanVien;
@@ -45,9 +46,12 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
     JLabel lbPageInfo;
     JButton btnFirst, btnPrev, btnNext, btnLast;
 
-    // Paging
-    int pageSize = 25, currentPage = 1, totalPages = 1, totalRows = 0;
-    String currentKeyword = "";
+    // Phân trang
+    private int currentPageNV = 1;
+    private int totalPagesNV  = 1;
+    private final int pageSizeNV = 25;   // hoặc giống tab_SanPham
+    private String currentKeywordNV = ""; // nếu có ô tìm kiếm theo SĐT
+
 
 
     public TAB_NhanVien() {
@@ -65,16 +69,21 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         rightTable.setBorder(createTitleBorder("Danh sách nhân viên", new Color(30, 144, 255), 20f, 1));
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftForm, rightTable);
-        split.setResizeWeight(0.35);              // form bên trái, bảng bên phải
+        split.setResizeWeight(0.35);
         split.setContinuousLayout(true);
         split.setOneTouchExpandable(false);
+        split.setDividerLocation(450); // hoặc tỉ lệ/px cố định bạn muốn
+        split.setEnabled(false);       // KHÓA không cho kéo nữa
         add(split, BorderLayout.CENTER);
 
         // tiêu đề lớn giống TAB_KhachHang
         setBorder(createTitleBorder("QUẢN LÝ NHÂN VIÊN", new Color(0, 102, 204), 22f, 0));
 
         bindEvents();
-        initData();
+        
+        currentKeywordNV = ""; // hoặc lấy từ ô tìm kiếm ban đầu
+        loadPageNV(1);
+
     }
 
     private JComponent buildNorthSearch() {
@@ -130,7 +139,10 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
         dcNgayTao = new JDateChooser();
         dcNgayTao.setDateFormatString("dd/MM/yyyy");
+        dcNgayTao.setEnabled(false);
+        dcNgayTao.setDate(new java.util.Date());
         addFormRow(form, gbc, row++, "Ngày tạo TK:", dcNgayTao);
+
 
         cboChucVu = new JComboBox<>();
         for (ChucVu cv : ChucVu.values()) {
@@ -140,7 +152,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
         main.add(form, BorderLayout.NORTH);
 
-        JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 8));
         btnThem = new JButton("Thêm");
         btnSua = new JButton("Sửa");
         btnLamMoi = new JButton("Làm mới");
@@ -159,8 +171,14 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         lbImg.setHorizontalAlignment(SwingConstants.CENTER);
         lbImg.setBorder(new EmptyBorder(16, 0, 0, 0));
         // Đường dẫn ảnh chỉnh lại cho đúng với project của bạn
-        lbImg.setIcon(new ImageIcon("src/main/resources/ui/kvstore.png"));
+        
+        ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
+
+        // scale xuống 300x300 rồi gán cho label
+        Image scaled = icon.getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH);
+        lbImg.setIcon(new ImageIcon(scaled));
         main.add(lbImg, BorderLayout.SOUTH);
+
 
         return main;
     }
@@ -179,6 +197,8 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         tbl = new JTable(mdl);
         tbl.setRowHeight(28);
         tbl.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		tbl.getTableHeader().setReorderingAllowed(false);
+		tbl.getTableHeader().setResizingAllowed(false);
 
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
@@ -192,25 +212,9 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         wrap.add(sp, BorderLayout.CENTER);
 
         // thanh phân trang bên dưới
+        // thanh phân trang bên dưới
         pnlPaging = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 6));
         pnlPaging.setBorder(new EmptyBorder(6, 0, 0, 0));
-
-        btnFirst = new JButton("|<");
-        btnPrev  = new JButton("<");
-        btnNext  = new JButton(">");
-        btnLast  = new JButton(">|");
-        styleButton(btnFirst, CLR_MUTED, CLR_TEXT_LIGHT);
-        styleButton(btnPrev,  CLR_MUTED, CLR_TEXT_LIGHT);
-        styleButton(btnNext,  CLR_MUTED, CLR_TEXT_LIGHT);
-        styleButton(btnLast,  CLR_MUTED, CLR_TEXT_LIGHT);
-
-        lbPageInfo = new JLabel("Trang 1/1");
-
-        pnlPaging.add(btnFirst);
-        pnlPaging.add(btnPrev);
-        pnlPaging.add(lbPageInfo);
-        pnlPaging.add(btnNext);
-        pnlPaging.add(btnLast);
 
         wrap.add(pnlPaging, BorderLayout.SOUTH);
         return wrap;
@@ -230,10 +234,12 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
     }
 
     private void bindEvents() {
-        btnThem.addActionListener(this);
-        btnSua.addActionListener(this);
-        btnLamMoi.addActionListener(this);
-        btnTim.addActionListener(this);
+    	btnThem.addActionListener(this);
+    	btnSua.addActionListener(this);
+    	btnLamMoi.addActionListener(this);
+    	btnTim.addActionListener(this);
+    	txtSearch.addActionListener(this);
+
 
         if (btnFirst != null) {
             btnFirst.addActionListener(this);
@@ -274,61 +280,6 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
     private String nextIdFromDB() {
         return dao.getNextMaNhanVien();
     }
-    
-    private void initData() {
-        currentKeyword = "";
-        currentPage = 1;
-        loadPage();
-    }
-
-    private void loadPage() {
-        totalRows = dao.countNhanVien(currentKeyword);
-        totalPages = (int) Math.ceil((double) totalRows / pageSize);
-        if (totalPages <= 0) totalPages = 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage <= 0) currentPage = 1;
-
-        java.util.List<NhanVien> ds = dao.getNhanVienPage(currentKeyword, currentPage, pageSize);
-        fillTable(ds);
-        updatePagingLabel();
-    }
-
-    private void fillTable(java.util.List<NhanVien> ds) {
-        mdl.setRowCount(0);
-        for (NhanVien nv : ds) {
-            String gioiTinhStr = nv.isGioiTinh() ? "Nam" : "Nữ";
-            java.time.LocalDate d = nv.getNgayTaoTaiKhoan();
-            String ngay = d != null
-                    ? d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                    : "";
-            String chucVuStr = nv.getChucVu();
-
-            mdl.addRow(new Object[] {
-                    nv.getMaNV(),
-                    nv.getTenNV(),
-                    gioiTinhStr,
-                    nv.getEmail(),
-                    nv.getSdt(),
-                    ngay,
-                    chucVuStr
-            });
-        }
-    }
-
-    private void updatePagingLabel() {
-        lbPageInfo.setText("Trang " + currentPage + "/" + totalPages + "  (Tổng: " + totalRows + ")");
-
-        boolean hasPrev = currentPage > 1;
-        boolean hasNext = currentPage < totalPages;
-
-        if (btnFirst != null) {
-            btnFirst.setEnabled(hasPrev);
-            btnPrev.setEnabled(hasPrev);
-            btnNext.setEnabled(hasNext);
-            btnLast.setEnabled(hasNext);
-        }
-    }
-
 
     private void clearForm() {
         txtMaNV.setText("");
@@ -336,7 +287,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         txtEmail.setText("");
         txtSdt.setText("");
         radNam.setSelected(true);
-        dcNgayTao.setDate(null);
+        dcNgayTao.setDate(new java.util.Date());
         if (cboChucVu.getItemCount() > 0) {
             cboChucVu.setSelectedIndex(0);
         }
@@ -355,7 +306,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         if (nv.getNgayTaoTaiKhoan() != null) {
             dcNgayTao.setDate(java.sql.Date.valueOf(nv.getNgayTaoTaiKhoan()));
         } else {
-            dcNgayTao.setDate(null);
+        	dcNgayTao.setDate(new java.util.Date());
         }
 
         ChucVu cv = ChucVu.fromAny(nv.getChucVu());
@@ -373,24 +324,77 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         String sdt = txtSdt.getText().trim();
         boolean gioiTinh = radNam.isSelected();
 
-        java.util.Date d = dcNgayTao.getDate();
-        java.time.LocalDate ngay = d != null
-                ? new java.sql.Date(d.getTime()).toLocalDate()
-                : java.time.LocalDate.now();
+        java.time.LocalDate ngay = null;
+        if (isNew) {
+            // thêm mới: luôn dùng ngày hiện tại, không cho tự chọn
+            ngay = java.time.LocalDate.now();
+            dcNgayTao.setDate(java.sql.Date.valueOf(ngay)); // cập nhật lại lên form cho đồng bộ
+        } else {
+            // sửa: giữ nguyên ngày tạo cũ từ DB (đang hiển thị trên dcNgayTao)
+            java.util.Date d = dcNgayTao.getDate();
+            if (d != null) {
+                ngay = new java.sql.Date(d.getTime()).toLocalDate();
+            }
+        }
 
-        ChucVu cv = (ChucVu) cboChucVu.getSelectedItem();
-        String chucVuStr = cv != null ? cv.toDbValue() : null;
+        if (ngay == null) {
+            JOptionPane.showMessageDialog(this, "Ngày tạo tài khoản không được rỗng!");
+            dcNgayTao.requestFocus();
+            return null;
+        }
+
 
         if (ten.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Tên nhân viên không được rỗng!");
             txtTenNV.requestFocus();
             return null;
         }
+        // Họ tên: chỉ chữ + khoảng trắng, cho phép dấu tiếng Việt, 2–50 ký tự
+        if (!ten.matches("^[\\p{L}\\s'.-]{2,50}$")) {
+            JOptionPane.showMessageDialog(this,
+                    "Họ tên chỉ được chứa chữ cái và khoảng trắng (2-50 ký tự)!");
+            txtTenNV.requestFocus();
+            return null;
+        }
+
+        // Email bắt buộc, định dạng đơn giản: ten@domain.tld
+        if (email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Email không được rỗng!");
+            txtEmail.requestFocus();
+            return null;
+        }
+        if (!email.matches("^[\\w._%+-]+@[\\w.-]+\\.[A-Za-z]{2,}$")) {
+            JOptionPane.showMessageDialog(this, "Email không hợp lệ!");
+            txtEmail.requestFocus();
+            return null;
+        }
+
+        // SĐT bắt buộc: 10 số, cho phép 0xxxxxxxxx hoặc +84xxxxxxxxx
+        if (sdt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại không được rỗng!");
+            txtSdt.requestFocus();
+            return null;
+        }
+        if (!sdt.matches("^(0\\d{9}|\\+84\\d{9})$")) {
+            JOptionPane.showMessageDialog(this,
+                    "Số điện thoại không hợp lệ!\nVD: 0912345678 hoặc +84912345678");
+            txtSdt.requestFocus();
+            return null;
+        }
+
         // thêm mới: không cần kiểm tra mã, mã sẽ được sinh tự động
         if (!isNew && ma.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn nhân viên cần sửa!");
             return null;
         }
+        
+        ChucVu cv = (ChucVu) cboChucVu.getSelectedItem();
+        if (cv == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn chức vụ!");
+            cboChucVu.requestFocus();
+            return null;
+        }
+        String chucVuStr = cv.toDbValue();
 
         return new NhanVien(ma, ten, gioiTinh, email, sdt, ngay, chucVuStr);
     }
@@ -407,24 +411,35 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             }
         }
     }
+    
+    private void selectRowByMaNV(String maNV) {
+        DefaultTableModel mdl = (DefaultTableModel) tbl.getModel();
+        for (int i = 0; i < mdl.getRowCount(); i++) {
+            Object val = mdl.getValueAt(i, 0); // cột 0 là mã NV
+            if (val != null && maNV.equals(val.toString())) {
+                tbl.setRowSelectionInterval(i, i);
+                tbl.scrollRectToVisible(tbl.getCellRect(i, 0, true));
+                break;
+            }
+        }
+    }
+
 
     @Override
     public void actionPerformed(ActionEvent e) {
         Object o = e.getSource();
 
-        if (o.equals(btnTim)) {
-            currentKeyword = txtSearch.getText().trim();
-            currentPage = 1;
-            loadPage();
+        if (o.equals(btnTim) || o.equals(txtSearch)) {
+            currentKeywordNV = txtSearch.getText().trim();
+            loadPageNV(1);
             return;
         }
 
         if (o.equals(btnLamMoi)) {
             txtSearch.setText("");
-            currentKeyword = "";
+            currentKeywordNV = "";
             clearForm();
-            currentPage = 1;
-            loadPage();
+            loadPageNV(1);
             return;
         }
 
@@ -443,12 +458,16 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             }
             JOptionPane.showMessageDialog(this, "Thêm nhân viên thành công!");
 
-            currentKeyword = "";
-            txtSearch.setText("");
-            initData();
-            selectRowByMa(maMoi);
+            // chuyển đến trang cuối (nơi có NV mới) và chọn đúng nhân viên
+            int totalRecords = dao.countNhanVien(currentKeywordNV);
+            totalPagesNV = (int) Math.ceil(totalRecords / (double) pageSizeNV);
+            if (totalPagesNV == 0) totalPagesNV = 1;
+
+            loadPageNV(totalPagesNV);
+            selectRowByMaNV(nv.getMaNV());
             return;
         }
+
 
         if (o.equals(btnSua)) {
             NhanVien nv = getNhanVienFromForm(false);
@@ -459,41 +478,9 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
                 return;
             }
             JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thành công!");
-
-            loadPage();
-            selectRowByMa(nv.getMaNV());
-            return;
-        }
-        
-        if (o.equals(btnFirst)) {
-            if (currentPage > 1) {
-                currentPage = 1;
-                loadPage();
-            }
-            return;
-        }
-
-        if (o.equals(btnPrev)) {
-            if (currentPage > 1) {
-                currentPage--;
-                loadPage();
-            }
-            return;
-        }
-
-        if (o.equals(btnNext)) {
-            if (currentPage < totalPages) {
-                currentPage++;
-                loadPage();
-            }
-            return;
-        }
-
-        if (o.equals(btnLast)) {
-            if (currentPage < totalPages) {
-                currentPage = totalPages;
-                loadPage();
-            }
+            
+            loadPageNV(currentPageNV);     // stay on current page
+            selectRowByMaNV(nv.getMaNV()); // focus lại đúng nhân viên vừa sửa
             return;
         }
 
@@ -523,6 +510,107 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
     @Override
     public void mouseExited(MouseEvent e) {}
+    
+    /**
+     * Tải 1 trang nhân viên từ DB và đổ vào bảng
+     */
+    private void loadPageNV(int page) {
+        if (page < 1) page = 1;
+        if (page > totalPagesNV) page = totalPagesNV;
+
+        currentPageNV = page;
+
+        // Lấy tổng số bản ghi
+        int totalRecords = dao.countNhanVien(currentKeywordNV);
+        totalPagesNV = (int) Math.ceil(totalRecords / (double) pageSizeNV);
+        if (totalPagesNV == 0) {
+            totalPagesNV = 1;
+        }
+        if (currentPageNV > totalPagesNV) {
+            currentPageNV = totalPagesNV;
+        }
+
+        // Lấy đúng 1 trang từ DB
+        java.util.List<NhanVien> ds = dao.getNhanVienPage(
+                currentKeywordNV, currentPageNV, pageSizeNV);
+
+        // Đổ vào bảng
+        DefaultTableModel mdl = (DefaultTableModel) tbl.getModel();
+        mdl.setRowCount(0);
+
+        for (NhanVien nv : ds) {
+            String gioiTinhStr = nv.isGioiTinh() ? "Nam" : "Nữ";
+            String ngayStr = nv.getNgayTaoTaiKhoan() != null
+                    ? nv.getNgayTaoTaiKhoan().toString()
+                    : "";
+
+            mdl.addRow(new Object[]{
+                    nv.getMaNV(),
+                    nv.getTenNV(),
+                    gioiTinhStr,
+                    nv.getEmail(),
+                    nv.getSdt(),
+                    ngayStr,
+                    nv.getChucVu()
+            });
+        }
+
+        updatePagingNV();
+    }
+
+    /**
+     * Vẽ lại dãy nút phân trang dạng số trong pnlPaging
+     */
+    private void updatePagingNV() {
+        pnlPaging.removeAll();
+
+        // Nếu chỉ có 1 trang thì thôi
+        if (totalPagesNV <= 1) {
+            pnlPaging.revalidate();
+            pnlPaging.repaint();
+            return;
+        }
+
+        // Nút về đầu & lùi 1
+        JButton bFirst = new JButton("|<");
+        bFirst.addActionListener(e -> loadPageNV(1));
+        pnlPaging.add(bFirst);
+
+        JButton bPrev = new JButton("<");
+        bPrev.addActionListener(e -> loadPageNV(Math.max(1, currentPageNV - 1)));
+        pnlPaging.add(bPrev);
+
+        // Các nút số trang (giống bên tab_sanpham thường là 7 nút)
+        int maxButtons = 7;
+        int start = Math.max(1, currentPageNV - 3);
+        int end = Math.min(totalPagesNV, start + maxButtons - 1);
+        if (end - start + 1 < maxButtons) {
+            start = Math.max(1, end - maxButtons + 1);
+        }
+
+        for (int i = start; i <= end; i++) {
+            final int page = i;
+            JButton btn = new JButton(String.valueOf(i));
+            if (i == currentPageNV) {
+                btn.setEnabled(false); // đang ở trang hiện tại
+            }
+            btn.addActionListener(e -> loadPageNV(page));
+            pnlPaging.add(btn);
+        }
+
+        // Nút tiến 1 & về cuối
+        JButton bNext = new JButton(">");
+        bNext.addActionListener(e -> loadPageNV(Math.min(totalPagesNV, currentPageNV + 1)));
+        pnlPaging.add(bNext);
+
+        JButton bLast = new JButton(">|");
+        bLast.addActionListener(e -> loadPageNV(totalPagesNV));
+        pnlPaging.add(bLast);
+
+        pnlPaging.revalidate();
+        pnlPaging.repaint();
+    }
+
 
     // Demo nhanh (tuỳ chọn)
 //    public static void main(String[] args) {
