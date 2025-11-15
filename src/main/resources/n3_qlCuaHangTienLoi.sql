@@ -186,6 +186,46 @@ VALUES
 (N'SP024', N'Giấy in A4 Double A 80gsm', 89000, N'giayin_a4.jpg', N'Giấy in chất lượng cao, trắng mịn', 1, N'DoDungVPPHam'),
 (N'SP025', N'Bìa hồ sơ nhựa A4', 6000, N'biahoso_a4.jpg', N'Bìa nhựa trong, bền đẹp', 1, N'DoDungVPPHam');
 
+GO
+
+
+-- ============================================
+-- DATA MẪU CHO BẢNG NHÂN VIÊN (30 NHÂN VIÊN)
+-- ============================================
+INSERT INTO NhanVien (maNV, tenNV, matKhau, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu) VALUES
+(N'NV001', N'Nguyễn Văn An',        N'123456', 1, N'an.nguyen@store.vn',        N'0901000001', '2025-01-01', N'QUANLY'),
+(N'NV002', N'Trần Thị Bích',        N'123456', 0, N'bich.tran@store.vn',        N'0901000002', '2025-01-02', N'THUNGAN'),
+(N'NV003', N'Lê Hoàng Nam',         N'123456', 1, N'nam.le@store.vn',           N'0901000003', '2025-01-03', N'THUNGAN'),
+(N'NV004', N'Phạm Thu Trang',       N'123456', 0, N'trang.pham@store.vn',       N'0901000004', '2025-01-04', N'THUNGAN'),
+(N'NV005', N'Hoàng Minh Đức',       N'123456', 1, N'duc.hoang@store.vn',        N'0901000005', '2025-01-05', N'QUANLY'),
+(N'NV006', N'Võ Ngọc Lan',          N'123456', 0, N'lan.vo@store.vn',           N'0901000006', '2025-01-06', N'THUNGAN'),
+(N'NV007', N'Bùi Anh Tuấn',         N'123456', 1, N'tuan.bui@store.vn',         N'0901000007', '2025-01-07', N'THUNGAN'),
+(N'NV008', N'Đặng Thị Hương',       N'123456', 0, N'huong.dang@store.vn',       N'0901000008', '2025-01-08', N'THUNGAN'),
+(N'NV009', N'Phan Quốc Khánh',      N'123456', 1, N'khanh.phan@store.vn',       N'0901000009', '2025-01-09', N'THUNGAN'),
+(N'NV010', N'Trương Mỹ Linh',       N'123456', 0, N'linh.truong@store.vn',      N'0901000010', '2025-01-10', N'THUNGAN'),
+(N'NV011', N'Nguyễn Hoàng Long',    N'123456', 1, N'long.nguyen@store.vn',      N'0901000011', '2025-01-11', N'QUANLY'),
+(N'NV012', N'Đỗ Thị Mai',           N'123456', 0, N'mai.do@store.vn',           N'0901000012', '2025-01-12', N'THUNGAN'),
+(N'NV013', N'Lý Gia Huy',           N'123456', 1, N'huy.ly@store.vn',           N'0901000013', '2025-01-13', N'THUNGAN'),
+(N'NV014', N'Vũ Ngọc Ánh',          N'123456', 0, N'anh.vu@store.vn',           N'0901000014', '2025-01-14', N'THUNGAN'),
+(N'NV015', N'Tô Minh Khang',        N'123456', 1, N'khang.to@store.vn',         N'0901000015', '2025-01-15', N'THUNGAN'),
+(N'NV016', N'Ngô Thị Yến',          N'123456', 0, N'yen.ngo@store.vn',          N'0901000016', '2025-01-16', N'THUNGAN'),
+(N'NV017', N'Phạm Anh Dũng',        N'123456', 1, N'dung.pham@store.vn',        N'0901000017', '2025-01-17', N'QUANLY'),
+(N'NV018', N'La Mỹ Duyên',          N'123456', 0, N'duyen.la@store.vn',         N'0901000018', '2025-01-18', N'THUNGAN'),
+(N'NV019', N'Kiều Quốc Bảo',        N'123456', 1, N'bao.kieu@store.vn',         N'0901000019', '2025-01-19', N'THUNGAN'),
+(N'NV020', N'Trịnh Thu Hà',         N'123456', 0, N'ha.trinh@store.vn',         N'0901000020', '2025-01-20', N'THUNGAN'),
+(N'NV021', N'Đinh Minh Phú',        N'123456', 1, N'phu.dinh@store.vn',         N'0901000021', '2025-01-21', N'THUNGAN'),
+(N'NV022', N'Nguyễn Thị Nhung',     N'123456', 0, N'nhung.nguyen@store.vn',     N'0901000022', '2025-01-22', N'THUNGAN'),
+(N'NV023', N'Lâm Hải Đăng',         N'123456', 1, N'dang.lam@store.vn',         N'0901000023', '2025-01-23', N'THUNGAN'),
+(N'NV024', N'Tạ Phương Thảo',       N'123456', 0, N'thao.ta@store.vn',          N'0901000024', '2025-01-24', N'THUNGAN'),
+(N'NV025', N'Đoàn Quốc Việt',       N'123456', 1, N'viet.doan@store.vn',        N'0901000025', '2025-01-25', N'QUANLY'),
+(N'NV026', N'Châu Kiều My',         N'123456', 0, N'my.chau@store.vn',          N'0901000026', '2025-01-26', N'THUNGAN'),
+(N'NV027', N'Đinh Hoàng Phát',      N'123456', 1, N'phat.dinh@store.vn',        N'0901000027', '2025-01-27', N'THUNGAN'),
+(N'NV028', N'Nguyễn Ngọc Trâm',     N'123456', 0, N'tram.nguyen@store.vn',      N'0901000028', '2025-01-28', N'THUNGAN'),
+(N'NV029', N'Phùng Anh Khoa',       N'123456', 1, N'khoa.phung@store.vn',       N'0901000029', '2025-01-29', N'THUNGAN'),
+(N'NV030', N'Trần Thảo Nhi',        N'123456', 0, N'nhi.tran@store.vn',         N'0901000030', '2025-01-30', N'THUNGAN');
+
+GO
+
 
 -- Alter
 GO
