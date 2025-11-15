@@ -105,6 +105,57 @@ public class DAO_KhachHang {
 		return n>0;
 	}
 	
+	// Tính tổng số khách hàng
+	public int getTongSoKhachHang() {
+	    int tong = 0;
+	    try {
+	        ConnectDB.getInstance();
+	        Connection con = ConnectDB.getCon();
+	        String sql = "SELECT COUNT(*) FROM KhachHang";
+	        Statement st = con.createStatement();
+	        ResultSet rs = st.executeQuery(sql);
+	        if (rs.next()) {
+	            tong = rs.getInt(1);
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return tong;
+	}
+
+	
+	// Phân trang
+	public ArrayList<KhachHang> getKhachHangTheoTrang(int page, int size) {
+	    ArrayList<KhachHang> dskh = new ArrayList<>();
+	    try {
+	        ConnectDB.getInstance();
+	        Connection con = ConnectDB.getCon();
+	        
+	        String sql = "SELECT * FROM KhachHang ORDER BY maKH " +
+	                     "OFFSET (? - 1) * ? ROWS FETCH NEXT ? ROWS ONLY";
+	        PreparedStatement ps = con.prepareStatement(sql);
+	        ps.setInt(1, page);
+	        ps.setInt(2, size);
+	        ps.setInt(3, size);
+	        
+	        ResultSet rs = ps.executeQuery();
+	        while (rs.next()) {
+	            String maKH = rs.getString("maKH");
+	            String tenKH = rs.getString("tenKH");
+	            boolean gioiTinh = rs.getBoolean("gioiTinh");
+	            String sdt = rs.getString("sdt");
+	            LocalDate ngayTao = rs.getDate("ngayTaoTK").toLocalDate();
+	            int diemTichLuy = rs.getInt("diemTichLuy");
+	            KhachHang kh = new KhachHang(maKH, tenKH, gioiTinh, sdt, ngayTao, diemTichLuy);
+	            dskh.add(kh);
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return dskh;
+	}
+
+	
 	public boolean capNhatKH(KhachHang kh) {
 		ConnectDB.getInstance();
 		Connection con = ConnectDB.getCon();

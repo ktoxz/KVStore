@@ -8,64 +8,6 @@ import java.util.List;
 import java.time.LocalDate;
 
 public class DAO_SanPham {
-	
-	// =========================
-    //  LẤY TOÀN BỘ LOẠI SẢN PHẨM
-    // =========================
-    public List<String> getAllLoaiSanPham() {
-        List<String> ds = new ArrayList<>();
-        String sql = "SELECT * FROM LoaiSanPham";
-        Connection con = ConnectDB.getCon(); // Dùng kết nối static
-        if (con == null) {
-            System.err.println("Kết nối DB chưa được thiết lập!");
-            return ds;
-        }
-
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                ds.add(rs.getString(1));
-            }
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return ds;
-    }
-
-    // =========================
-    //  LẤY TOÀN BỘ SẢN PHẨM (Hàm Main.java cần)
-    // =========================
-    public List<SanPham> getAllSanPham() {
-        List<SanPham> ds = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham ORDER BY maSP";
-        Connection con = ConnectDB.getCon(); // Dùng kết nối static
-        if (con == null) {
-            System.err.println("Kết nối DB chưa được thiết lập!\n");
-            return ds;
-        }
-
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                SanPham sp = new SanPham(
-                        rs.getString("maSP"),
-                        rs.getString("tenSP"),
-                        rs.getDouble("giaSP"),
-                        rs.getString("moTaSP"),
-                        rs.getString("hinhAnhSP"),
-                        rs.getBoolean("tinhTrangSP"),
-                        rs.getString("loaiSP")
-                );
-                ds.add(sp);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return ds;
-    }
     
     // =========================
     //  ĐẾM SẢN PHẨM (CÓ ÁP DỤNG TỪ KHÓA TÌM KIẾM)
@@ -259,7 +201,7 @@ public class DAO_SanPham {
     // =========================
     public List<SanPham> searchByNameOrMa(String keyword, int limit) {
         List<SanPham> ds = new ArrayList<>();
-        String sql = "SELECT TOP (?) * FROM SanPham WHERE maSP LIKE ? OR tenSP LIKE ?";
+        String sql = "SELECT TOP (?) * FROM SanPham WHERE maSP LIKE ? OR tenSP LIKE ? and tinhTrangSP = 1";
         Connection con = ConnectDB.getCon();
         if (con == null) return ds;
 
@@ -364,31 +306,7 @@ public class DAO_SanPham {
         }
         return -1;
     }
-    
-    // =========================
-    //  SINH MÃ MỚI KHÔNG CẦN LOAD HẾT BẢNG
-    // =========================
-    public String getNextIdSanPham() {
-        Connection con = ConnectDB.getCon();
-        if (con == null) return "SP001";
 
-        String sql = "SELECT MAX(maSP) FROM SanPham WHERE maSP LIKE 'SP%'";
-        try (Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-
-            if (rs.next()) {
-                String maxId = rs.getString(1);
-                if (maxId != null && maxId.matches("SP\\d+")) {
-                    int n = Integer.parseInt(maxId.replaceAll("\\D+", ""));
-                    return String.format("SP%03d", n + 1);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi sinh mã sản phẩm mới: " + e.getMessage());
-        }
-        // nếu bảng đang rỗng hoặc lỗi thì quay về SP001
-        return "SP001";
-    }
 
     // =========================
     //  SINH MÃ SẢN PHẨM TIẾP THEO DẠNG SPxxx
@@ -474,7 +392,6 @@ public class DAO_SanPham {
         if (pageSize <= 0) pageSize = 5;
         if (page <= 0) page = 1;
         int offset = (page - 1) * pageSize;
-
         String sql = "SELECT DISTINCT sp.*" +
                      " FROM SanPham sp" +
                      " JOIN CT_KhuyenMai ct ON sp.maSP = ct.maSP" +

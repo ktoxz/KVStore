@@ -309,9 +309,8 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         	dcNgayTao.setDate(new java.util.Date());
         }
 
-        ChucVu cv = ChucVu.fromAny(nv.getChucVu());
-        if (cv != null) {
-            cboChucVu.setSelectedItem(cv);
+        if (nv.getChucVu() != null) {
+            cboChucVu.setSelectedItem(nv.getChucVu());
         } else {
             cboChucVu.setSelectedIndex(-1);
         }
@@ -394,9 +393,8 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
             cboChucVu.requestFocus();
             return null;
         }
-        String chucVuStr = cv.toDbValue();
 
-        return new NhanVien(ma, ten, gioiTinh, email, sdt, ngay, chucVuStr);
+        return new NhanVien(ma, ten, gioiTinh, email, sdt, ngay, cv);
     }
 
 

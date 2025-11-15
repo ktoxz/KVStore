@@ -1,80 +1,86 @@
 package com.gui;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
-
-import com.connectDB.ConnectDB;
 import com.dao.DAO_KhachHang;
 import com.entity.KhachHang;
 import com.toedter.calendar.JDateChooser;
 
-public class TAB_KhachHang extends JPanel implements ActionListener, MouseListener{
-
+public class TAB_KhachHang extends JPanel implements ActionListener, MouseListener {
     private JTextField txtMaKH, txtTenKH, txtSDT, txtDiemTichLuy, txtTim;
     private JRadioButton radNam, radNu;
     private JDateChooser dateChooser;
-    private JButton btnThem, btnSua, btnTim;
+    private JButton btnThem, btnSua, btnTim, btnLamMoi;
     private JTable tableKH;
     private DefaultTableModel modelKH;
-    
- // ===== THÊM CÁC BIẾN SAU Ở ĐẦU LỚP =====
-    private List<KhachHang> listAll; // danh sách tất cả khách hàng
+
+    // ===== PHÂN TRANG + TÌM KIẾM =====
+    private List<KhachHang> listAll = null; // ← KHỞI TẠO NULL, SẼ LOAD SAU
     private int currentPage = 1;
     private final int rowsPerPage = 10;
     private JLabel lblPageInfo;
     private JButton btnPrev, btnNext;
 
-    
-    private DAO_KhachHang kh_dao;
-	private JButton btnLamMoi;
+    private DAO_KhachHang kh_dao = new DAO_KhachHang();
 
     public TAB_KhachHang() {
-
-    	kh_dao = new DAO_KhachHang();
-    	
-    	setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
+
+        // ===== HEADER =====
         JLabel lblTitle = new JLabel("QUẢN LÝ KHÁCH HÀNG");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitle.setForeground(new Color(0, 90, 200));
-
         JPanel pHeader = new JPanel(new FlowLayout(FlowLayout.LEFT));
         pHeader.setBackground(Color.WHITE);
         pHeader.add(lblTitle);
         add(pHeader, BorderLayout.NORTH);
 
-        // ===== Center Panel =====
+        // ===== CENTER =====
         JPanel pCenter = new JPanel(new BorderLayout());
 
-        // ===== LEFT PANEL (Form nhập) =====
+        // ===== LEFT: FORM =====
+        JPanel pLeft = createLeftForm();
+        pCenter.add(pLeft, BorderLayout.WEST);
+
+        // ===== RIGHT: TABLE + SEARCH + PAGINATION =====
+        JPanel pRight = createRightTable();
+        pCenter.add(pRight, BorderLayout.CENTER);
+
+        add(pCenter, BorderLayout.CENTER);
+
+        // ===== LOAD DATA =====
+        DocDuLieuVaoDatabase();
+
+        // ===== SỰ KIỆN =====
+        btnThem.addActionListener(this);
+        btnSua.addActionListener(this);
+        btnLamMoi.addActionListener(this);
+        btnTim.addActionListener(this);
+        tableKH.addMouseListener(this);
+    }
+
+    private JPanel createLeftForm() {
         JPanel pLeft = new JPanel();
         Font font = new Font("Arial", Font.BOLD, 18);
-
-        TitledBorder border_left = BorderFactory.createTitledBorder("Thông tin khách hàng");
-        border_left.setTitleColor(Color.BLUE);
-        border_left.setTitleFont(font);
-        pLeft.setBorder(border_left);
+        TitledBorder border = BorderFactory.createTitledBorder("Thông tin khách hàng");
+        border.setTitleColor(Color.BLUE);
+        border.setTitleFont(font);
+        pLeft.setBorder(border);
 
         Box box = Box.createVerticalBox();
-
         int labelWidth = 120;
         Dimension sizeTxt = new Dimension(180, 25);
         Dimension sizeBtn = new Dimension(130, 30);
@@ -100,19 +106,14 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         Box b3 = Box.createHorizontalBox();
         JLabel lblGT = new JLabel("Giới tính:");
         lblGT.setPreferredSize(new Dimension(labelWidth, 25));
-
-        radNam = new JRadioButton("Nam", true); // 0-> Nam (false)
-        radNu = new JRadioButton("Nữ"); // 1 -> Nữ 9 (true)
+        radNam = new JRadioButton("Nam", true);
+        radNu = new JRadioButton("Nữ");
         ButtonGroup groupGT = new ButtonGroup();
         groupGT.add(radNam); groupGT.add(radNu);
-
         JPanel genderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        genderPanel.setPreferredSize(new Dimension(180, 25)); // Giống kích thước txt
-        genderPanel.add(radNam);
-        genderPanel.add(radNu);
-
-        b3.add(lblGT);
-        b3.add(genderPanel);
+        genderPanel.setPreferredSize(new Dimension(180, 25));
+        genderPanel.add(radNam); genderPanel.add(radNu);
+        b3.add(lblGT); b3.add(genderPanel);
 
         // SĐT
         Box b4 = Box.createHorizontalBox();
@@ -132,7 +133,6 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         dateChooser.setPreferredSize(sizeTxt);
         b5.add(lblNgay); b5.add(dateChooser);
 
-
         // Điểm tích lũy
         Box b6 = Box.createHorizontalBox();
         JLabel lblDiem = new JLabel("Điểm tích lũy:");
@@ -143,17 +143,17 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         b6.add(lblDiem); b6.add(txtDiemTichLuy);
 
         // Buttons
-        Color textColor = Color.WHITE; 
+        Color textColor = Color.WHITE;
         btnThem = new JButton("Thêm");
         btnThem.setBackground(Color.BLUE);
         btnThem.setForeground(textColor);
         btnThem.setPreferredSize(sizeBtn);
-        
+
         btnSua = new JButton("Sửa");
         btnSua.setBackground(Color.ORANGE);
         btnSua.setForeground(textColor);
         btnSua.setPreferredSize(sizeBtn);
-        
+
         btnLamMoi = new JButton("Làm mới");
         btnLamMoi.setBackground(Color.GREEN);
         btnLamMoi.setForeground(textColor);
@@ -165,18 +165,17 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         bBtns.add(btnSua);
         bBtns.add(Box.createHorizontalStrut(10));
         bBtns.add(btnLamMoi);
-        
+
         // Ảnh
         ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
         Image scaled = icon.getImage().getScaledInstance(400, 420, Image.SCALE_SMOOTH);
         JLabel imgLabel = new JLabel(new ImageIcon(scaled));
         imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
         imgLabel.setBorder(new EmptyBorder(40, 0, 40, 0));
-        
         Box bIcon = Box.createHorizontalBox();
         bIcon.add(imgLabel);
 
-        // Add to vertical box
+        // Add to box
         box.add(b1); box.add(Box.createVerticalStrut(8));
         box.add(b2); box.add(Box.createVerticalStrut(8));
         box.add(b3); box.add(Box.createVerticalStrut(8));
@@ -187,51 +186,53 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         box.add(bIcon);
 
         pLeft.add(box, BorderLayout.NORTH);
+        return pLeft;
+    }
 
-        // ===== RIGHT PANEL (Table + search) =====
+    private JPanel createRightTable() {
         JPanel pRight = new JPanel(new BorderLayout());
-        TitledBorder border_right = BorderFactory.createTitledBorder("Danh sách khách hàng");
-        border_right.setTitleColor(Color.BLUE);
-        border_right.setTitleFont(font);
-        pRight.setBorder(border_right);
+        Font font = new Font("Arial", Font.BOLD, 18);
+        TitledBorder border = BorderFactory.createTitledBorder("Danh sách khách hàng");
+        border.setTitleColor(Color.BLUE);
+        border.setTitleFont(font);
+        pRight.setBorder(border);
 
+        // Tìm kiếm
         JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         JLabel lblTim = new JLabel("Tìm khách bằng số điện thoại:");
         lblTim.setPreferredSize(new Dimension(180, 25));
         txtTim = new JTextField(20);
         btnTim = new JButton("Tìm");
-
         pSearch.add(lblTim);
         pSearch.add(txtTim);
         pSearch.add(btnTim);
 
+        // Bảng
         String[] header = {"Mã KH", "Tên KH", "Giới tính", "SĐT", "Ngày tạo", "Điểm tích lũy"};
         modelKH = new DefaultTableModel(header, 0);
-        tableKH = new JTable(modelKH); 
+        tableKH = new JTable(modelKH);
+        tableKH.setRowHeight(40);
         JScrollPane pane = new JScrollPane(tableKH);
-        
-     // Panel điều hướng phân trang
+
+        // Phân trang
         JPanel pPagination = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnPrev = new JButton("< Trang trước");
         btnNext = new JButton("Trang sau >");
         lblPageInfo = new JLabel("Trang 1 / 1");
-
         pPagination.add(btnPrev);
         pPagination.add(lblPageInfo);
         pPagination.add(btnNext);
 
-        pRight.add(pPagination, BorderLayout.SOUTH);
-
-        // Thêm sự kiện cho 2 nút
+        // Thêm sự kiện phân trang
         btnPrev.addActionListener(e -> {
             if (currentPage > 1) {
                 currentPage--;
                 loadDataToTable();
             }
         });
-
         btnNext.addActionListener(e -> {
-            int totalPage = (int) Math.ceil((double) listAll.size() / rowsPerPage);
+            int totalKH = kh_dao.getTongSoKhachHang();
+            int totalPage = (int) Math.ceil((double) totalKH / rowsPerPage);
             if (currentPage < totalPage) {
                 currentPage++;
                 loadDataToTable();
@@ -240,306 +241,241 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 
         pRight.add(pSearch, BorderLayout.NORTH);
         pRight.add(pane, BorderLayout.CENTER);
-
-        // Add to center
-        pCenter.add(pLeft, BorderLayout.WEST);
-        pCenter.add(pRight, BorderLayout.CENTER);
-
-        add(pCenter, BorderLayout.CENTER);
-        
-        // Đọc dữ liệu
-        DocDuLieuVaoDatabase();
-        
-        // Sự kiện
-        btnThem.addActionListener(this);
-        btnSua.addActionListener(this);
-        btnLamMoi.addActionListener(this);
-        btnTim.addActionListener(this);
-        tableKH.addMouseListener(this);
+        pRight.add(pPagination, BorderLayout.SOUTH);
+        return pRight;
     }
-    
+
     private void loadDataToTable() {
-        modelKH.setRowCount(0); // Xóa bảng
-
-        int start = (currentPage - 1) * rowsPerPage;
-        int end = Math.min(start + rowsPerPage, listAll.size());
+        modelKH.setRowCount(0);
+        List<KhachHang> listPage = kh_dao.getKhachHangTheoTrang(currentPage, rowsPerPage);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-        for (int i = start; i < end; i++) {
-            KhachHang khachHang = listAll.get(i);
+        for (KhachHang kh : listPage) {
             modelKH.addRow(new Object[]{
-                khachHang.getMaKH(),
-                khachHang.getTenKH(),
-                khachHang.isGioiTinh() ? "Nữ" : "Nam",
-                khachHang.getSdt(),
-                khachHang.getNgayTao().format(fmt),
-                khachHang.getDiemTichLuy()
+                kh.getMaKH(),
+                kh.getTenKH(),
+                kh.isGioiTinh() ? "Nữ" : "Nam",
+                kh.getSdt(),
+                kh.getNgayTao().format(fmt),
+                kh.getDiemTichLuy()
             });
         }
-
-        // Cập nhật label hiển thị trang
-        int totalPage = (int) Math.ceil((double) listAll.size() / rowsPerPage);
+        int totalKH = kh_dao.getTongSoKhachHang();
+        int totalPage = (int) Math.ceil((double) totalKH / rowsPerPage);
         lblPageInfo.setText("Trang " + currentPage + " / " + totalPage);
-
-        // Vô hiệu hóa nút nếu ở đầu/cuối
         btnPrev.setEnabled(currentPage > 1);
         btnNext.setEnabled(currentPage < totalPage);
     }
 
-    
     public void DocDuLieuVaoDatabase() {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        listAll = kh_dao.getAllKhachHang(); // lưu toàn bộ danh sách khách hàng
-        loadDataToTable(); // chỉ load 10 dòng đầu tiên
+        currentPage = 1;
+        listAll = kh_dao.getAllKhachHang(); // ← KHỞI TẠO listAll
+        loadDataToTable();
     }
 
-    
-    // Kiểm tra dữ liệu nhập
     public boolean ValidDate() {
-		String tenKH = txtTenKH.getText().trim();
-		String sdt = txtSDT.getText().trim();
-		LocalDate ngayTao = dateChooser.getDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-		
-		//Kiểm tra tên KH
-    	if(tenKH.length()>0) {
-    		if (!tenKH.matches("([\\p{Lu}][\\p{Ll}]+)( [\\p{Lu}][\\p{Ll}]+)*")) {
-    			JOptionPane.showMessageDialog(this, "Tên khách hàng chưa nhập đúng định dạng!");
-    		    txtTenKH.requestFocus();
-    		    return false;
-    		}
-    	}else {
-    		JOptionPane.showMessageDialog(this, "Nhập liệu không hợp lệ!");
-    		txtTenKH.requestFocus();
-    		return false;
-    	}
-    	
-    	if (tenKH.length() > 100) {
-    	    JOptionPane.showMessageDialog(this, "Tên khách hàng không được vượt quá 100 ký tự!");
-    	    txtTenKH.requestFocus();
-    	    return false;
-    	}
-    	
-    	// Kiểm tra số điện thoại
-    	if(sdt.length()==10) {
-    		if(!sdt.matches("(0)[0-9]{9}")) {
-    			JOptionPane.showMessageDialog(this, "Số điện thoại không đúng định dạng (bắt đầu là 0)");
-    		    txtTenKH.requestFocus();
-    		    return false;
-    		}
-    	}else {
-    		JOptionPane.showMessageDialog(this, "Nhập liệu không hợp lệ!");
-    		txtTenKH.requestFocus();
-    		return false;
-    	}
-    	
-    	// Kiểm tra ngày đăng ký
+        String tenKH = txtTenKH.getText().trim();
+        String sdt = txtSDT.getText().trim();
+        if (dateChooser.getDate() == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn ngày tạo!");
+            return false;
+        }
+        LocalDate ngayTao = dateChooser.getDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+        // Tên KH
+        if (tenKH.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập tên khách hàng!");
+            txtTenKH.requestFocus();
+            return false;
+        }
+        if (!tenKH.matches("([\\p{Lu}][\\p{Ll}]+)( [\\p{Lu}][\\p{Ll}]+)*")) {
+            JOptionPane.showMessageDialog(this, "Tên khách hàng chưa đúng định dạng (VD: Nguyễn Văn A)!");
+            txtTenKH.requestFocus();
+            return false;
+        }
+        if (tenKH.length() > 100) {
+            JOptionPane.showMessageDialog(this, "Tên khách hàng không được vượt quá 100 ký tự!");
+            txtTenKH.requestFocus();
+            return false;
+        }
+
+        // SĐT
+        if (sdt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại!");
+            txtSDT.requestFocus();
+            return false;
+        }
+        if (sdt.length() != 10 || !sdt.matches("0[0-9]{9}")) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại phải có 10 chữ số, bắt đầu bằng 0!");
+            txtSDT.requestFocus();
+            return false;
+        }
+
+        // Ngày tạo
         if (ngayTao.isAfter(LocalDate.now())) {
             JOptionPane.showMessageDialog(this, "Ngày tạo không được lớn hơn ngày hiện tại!");
             return false;
         }
-		
-    	return true;
-	}
-    
-    // Lấy dữ liệu từ form
+        return true;
+    }
+
     public KhachHang revertKHFromTextfields() {
         String maKH = txtMaKH.getText().trim();
         String tenKH = txtTenKH.getText().trim();
-        boolean gioiTinh = radNu.isSelected(); 
+        boolean gioiTinh = radNu.isSelected();
         String sdt = txtSDT.getText().trim();
+        LocalDate ngayTaoTK = dateChooser.getDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        int diemTichLuy = 0;
+        try {
+            diemTichLuy = Integer.parseInt(txtDiemTichLuy.getText());
+        } catch (Exception e) {}
+        return new KhachHang(maKH, tenKH, gioiTinh, sdt, ngayTaoTK, diemTichLuy);
+    }
 
-        // Lấy ngày từ JDateChooser
-        Date date = dateChooser.getDate();
-        LocalDate ngayTaoTK = null;
-        if (date != null) {
-            ngayTaoTK = date.toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate();
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        Object o = e.getSource();
+
+        // ===== THÊM =====
+        if (o == btnThem) {
+            if (!ValidDate()) return;
+
+            String sdt = txtSDT.getText().trim();
+            if (kh_dao.isTrungSoDienThoai(sdt)) {
+                JOptionPane.showMessageDialog(this, "Số điện thoại đã tồn tại!");
+                txtSDT.requestFocus();
+                return;
+            }
+
+            String maKH = kh_dao.phatSinhMaKH();
+            txtMaKH.setText(maKH);
+
+            KhachHang kh = revertKHFromTextfields();
+            kh.setDiemTichLuy(0);
+
+            if (kh_dao.themKH(kh)) {
+                listAll = kh_dao.getAllKhachHang(); // Cập nhật listAll
+                int newIndex = listAll.size() - 1;
+                currentPage = (newIndex / rowsPerPage) + 1;
+                loadDataToTable();
+
+                int rowInTable = newIndex % rowsPerPage;
+                if (rowInTable < modelKH.getRowCount()) {
+                    tableKH.setRowSelectionInterval(rowInTable, rowInTable);
+                    tableKH.scrollRectToVisible(tableKH.getCellRect(rowInTable, 0, true));
+                }
+                JOptionPane.showMessageDialog(this, "Thêm thành công!");
+            } else {
+                JOptionPane.showMessageDialog(this, "Thêm thất bại!");
+            }
         }
 
-        int diemTichLuy = 0;
-    	return new KhachHang(maKH, tenKH, gioiTinh, sdt, ngayTaoTK, diemTichLuy);
-	}
-    
-    @Override
-	public void actionPerformed(ActionEvent e) {
-		Object o = e.getSource();
-		if(o.equals(btnThem)) {
-			if(ValidDate()) {
-				// Phát sinh mã Khách Hàng
-				String maKh = kh_dao.phatSinhMaKH();
-				txtMaKH.setText(maKh);
-				
-				// Kiểm tra sđt
-				String sdt = txtSDT.getText().trim();
-				if(kh_dao.isTrungSoDienThoai(sdt)) {
-					JOptionPane.showMessageDialog(this, "Số điện thoại này đã tồn tại!");
-				    txtMaKH.requestFocus();
-				    return;
-				}
-				
-				KhachHang kh = revertKHFromTextfields();
-				
-				kh.setDiemTichLuy(0);
-				
-				if (kh_dao.themKH(kh)) {
-                    modelKH.addRow(new Object[] {
-                        kh.getMaKH(),
-                        kh.getTenKH(),
-                        kh.isGioiTinh() ? "Nữ" : "Nam",  // đổi boolean -> text
-                        kh.getSdt(),
-                        kh.getNgayTao(),
-                        kh.getDiemTichLuy()
-                    });
-                    JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!");
+        // ===== SỬA =====
+        else if (o == btnSua) {
+            if (!ValidDate()) return;
+            if (txtMaKH.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng để sửa!");
+                return;
+            }
+            KhachHang kh = revertKHFromTextfields();
+            if (kh_dao.capNhatKH(kh)) {
+                JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+                int row = tableKH.getSelectedRow();
+                if (row >= 0) {
+                    modelKH.setValueAt(kh.getTenKH(), row, 1);
+                    modelKH.setValueAt(kh.isGioiTinh() ? "Nữ" : "Nam", row, 2);
+                    modelKH.setValueAt(kh.getDiemTichLuy(), row, 5);
                 }
-			}
-		}
-		
-		// Sửa thông tin
-		if(o.equals(btnSua)) {
-			if(ValidDate()) {
-				KhachHang kh = revertKHFromTextfields();
-				
-				if(kh_dao.capNhatKH(kh)) {
-					JOptionPane.showMessageDialog(this, "Cập nhật khách hàng thành công!");
-					
-					//Cập nhật lại dữ liệu trên JTable
-					int row = tableKH.getSelectedRow();
-					if(row >= 0) {
-						modelKH.setValueAt(kh.getTenKH(), row,1);
-						modelKH.setValueAt(kh.isGioiTinh() ? "Nữ" : "Nam", row, 2);
-	                    modelKH.setValueAt(kh.getDiemTichLuy(), row, 5);
-					}
-				}else {
-					JOptionPane.showMessageDialog(this, "Cập nhật thất bại!");
-				}
-			}
-		}
-		
-		// Làm mới trang
-		if(o.equals(btnLamMoi)) {
-			txtMaKH.setText("");
-			txtTenKH.setText("");
-			radNam.setSelected(false);
-			txtSDT.setText("");
-			dateChooser.setDate(new Date());
-			txtDiemTichLuy.setText("");
-			txtTim.setText("");
-			txtTenKH.requestFocus();
-			
-			// Trở về trang đầu tiên
-		    currentPage = 1;
-		    loadDataToTable(); // tải lại dữ liệu từ danh sách gốc
+                loadDataToTable(); // Tải lại để đồng bộ
+            } else {
+                JOptionPane.showMessageDialog(this, "Cập nhật thất bại!");
+            }
+        }
 
-		    // Bỏ chọn trên bảng (nếu có)
-		    tableKH.clearSelection();
-		}
-		
-		if(o.equals(btnTim)) {
-			String timSDT = txtTim.getText().trim();
-			if(timSDT.isEmpty()) {
-				JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại cần tìm!");
-				return;
-			}
-			
-			KhachHang kh = kh_dao.timKiemKH(timSDT);
-			
-			if(kh == null) {
-				JOptionPane.showMessageDialog(this, "Khách hàng chưa được tạo!");
-				return;
-			}
-			
-			int viTriTrongList = -1;
-		    for (int i = 0; i < listAll.size(); i++) {
-		        if (listAll.get(i).getMaKH().equals(kh.getMaKH())) { // dùng maKH để so sánh chính xác
-		            viTriTrongList = i;
-		            break;
-		        }
-		    }
-			
-		    if (viTriTrongList == -1) {
-		        JOptionPane.showMessageDialog(this, "Lỗi: Khách hàng tìm thấy nhưng không có trong danh sách hiện tại!");
-		        return;
-		    }
+        // ===== LÀM MỚI =====
+        else if (o == btnLamMoi) {
+            txtMaKH.setText("");
+            txtTenKH.setText("");
+            radNam.setSelected(true); // Chỉ set true cho cái muốn chọn
+            txtSDT.setText("");
+            dateChooser.setDate(new Date());
+            txtDiemTichLuy.setText("0");
+            txtTim.setText("");
+            txtTenKH.requestFocus();
+            currentPage = 1;
+            loadDataToTable();
+            tableKH.clearSelection();
+        }
 
-		    // Tính trang cần đến
-		    int trangMoi = (viTriTrongList / rowsPerPage) + 1;
+        // ===== TÌM KIẾM =====
+        else if (o == btnTim) {
+            String sdt = txtTim.getText().trim();
+            if (sdt.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại!");
+                return;
+            }
+            if (listAll == null) listAll = kh_dao.getAllKhachHang(); // Đảm bảo có dữ liệu
 
-		    // Nếu không phải trang hiện tại → chuyển trang
-		    if (currentPage != trangMoi) {
-		        currentPage = trangMoi;
-		        loadDataToTable(); // tải lại dữ liệu trang mới
-		    }
+            KhachHang kh = kh_dao.timKiemKH(sdt);
+            if (kh == null) {
+                JOptionPane.showMessageDialog(this, "Không tìm thấy khách hàng!");
+                return;
+            }
 
-		    //Tính chỉ số dòng trong bảng hiện tại (0 -> 9)
-		    int rowInTable = viTriTrongList % rowsPerPage;
+            int index = -1;
+            for (int i = 0; i < listAll.size(); i++) {
+                if (listAll.get(i).getMaKH().equals(kh.getMaKH())) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1) return;
 
-		    // Chọn dòng và cuộn đến
-		    tableKH.setRowSelectionInterval(rowInTable, rowInTable);
-		    tableKH.scrollRectToVisible(tableKH.getCellRect(rowInTable, 0, true));
-		    
-		    // Đưa dữ liệu lên form
-		    txtMaKH.setText(kh.getMaKH());
-		    txtTenKH.setText(kh.getTenKH());
-		    if(kh.isGioiTinh()) {
-		    	radNu.setSelected(true);
-		    }else {
-		    	radNam.setSelected(true);
-		    }
-		    txtSDT.setText(kh.getSdt());
-			txtDiemTichLuy.setText(String.valueOf(kh.getDiemTichLuy()));
-			dateChooser.setDate(java.sql.Date.valueOf(kh.getNgayTao()));
-		}
-		
-	}
+            int targetPage = (index / rowsPerPage) + 1;
+            if (currentPage != targetPage) {
+                currentPage = targetPage;
+                loadDataToTable();
+            }
 
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		int row = tableKH.getSelectedRow();
-		txtMaKH.setText(modelKH.getValueAt(row, 0).toString());
-		txtTenKH.setText(modelKH.getValueAt(row, 1).toString());
-		String gioiTinh = modelKH.getValueAt(row, 2).toString();
-	    if ("Nam".equalsIgnoreCase(gioiTinh)) {
-	        radNam.setSelected(true);
-	    } else if ("Nữ".equalsIgnoreCase(gioiTinh)) {
-	        radNu.setSelected(true);
-	    }
-		txtSDT.setText(modelKH.getValueAt(row, 3).toString());
-		String ngayTaoStr = modelKH.getValueAt(row, 4).toString();
-	    try {
-	        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-	        Date ngayTao = sdf.parse(ngayTaoStr);
-	        dateChooser.setDate(ngayTao); 
-	    } catch (ParseException ex) {
-	        ex.printStackTrace();
-	        dateChooser.setDate(new Date());
-	    }
-		txtDiemTichLuy.setText(modelKH.getValueAt(row, 5).toString());
-	}
+            int rowInTable = index % rowsPerPage;
+            tableKH.setRowSelectionInterval(rowInTable, rowInTable);
+            tableKH.scrollRectToVisible(tableKH.getCellRect(rowInTable, 0, true));
 
-	@Override
-	public void mousePressed(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
+            // Đưa lên form
+            txtMaKH.setText(kh.getMaKH());
+            txtTenKH.setText(kh.getTenKH());
+            if (kh.isGioiTinh()) radNu.setSelected(true);
+            else radNam.setSelected(true);
+            txtSDT.setText(kh.getSdt());
+            txtDiemTichLuy.setText(String.valueOf(kh.getDiemTichLuy()));
+            dateChooser.setDate(java.sql.Date.valueOf(kh.getNgayTao()));
+        }
+    }
 
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        int row = tableKH.getSelectedRow();
+        if (row < 0) return;
 
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
+        txtMaKH.setText(modelKH.getValueAt(row, 0).toString());
+        txtTenKH.setText(modelKH.getValueAt(row, 1).toString());
+        String gt = modelKH.getValueAt(row, 2).toString();
+        radNam.setSelected("Nam".equalsIgnoreCase(gt));
+        radNu.setSelected("Nữ".equalsIgnoreCase(gt));
+        txtSDT.setText(modelKH.getValueAt(row, 3).toString());
+        txtDiemTichLuy.setText(modelKH.getValueAt(row, 5).toString());
 
-	@Override
-	public void mouseExited(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-    
+        String dateStr = modelKH.getValueAt(row, 4).toString();
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            dateChooser.setDate(sdf.parse(dateStr));
+        } catch (ParseException ex) {
+            dateChooser.setDate(new Date());
+        }
+    }
+
+    // Các mouse event khác
+    public void mousePressed(MouseEvent e) {}
+    public void mouseReleased(MouseEvent e) {}
+    public void mouseEntered(MouseEvent e) {}
+    public void mouseExited(MouseEvent e) {}
 }

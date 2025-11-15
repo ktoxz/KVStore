@@ -43,7 +43,8 @@ public class DAO_NhanVien {
                 String sdt = rs.getString(6);
                 LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                 String chucVu = rs.getString(8);
-                nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chucVu);
+                ChucVu cv = ChucVu.valueOf(chucVu);
+                nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,cv);
             }
 
             rs.close();
@@ -79,7 +80,8 @@ public class DAO_NhanVien {
                 String sdt = rs.getString(6);
                 LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                 String chucVu = rs.getString(8);
-                NhanVien nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,chucVu);
+                ChucVu cv = ChucVu.valueOf(chucVu);
+                NhanVien nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,cv);
                 ls.add(nv);
             }
 
@@ -178,8 +180,9 @@ public class DAO_NhanVien {
 	                String sdt = rs.getString(6);
 	                LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
 	                String chucVu = ChucVu.fromAny(rs.getString(8)).toString();
-	
-	                ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu));
+                    ChucVu cv = ChucVu.fromAny(chucVu);
+
+                    ds.add(new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, cv));
 	            }
 	        }
 	    } catch (SQLException e) {
@@ -259,7 +262,7 @@ public class DAO_NhanVien {
             if (d == null) d = LocalDate.now();
             ps.setDate(6, java.sql.Date.valueOf(d));
 
-            ps.setString(7, nv.getChucVu());
+            ps.setString(7, nv.getChucVu().toDbValue());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi khi thêm nhân viên: " + e.getMessage());
@@ -286,7 +289,7 @@ public class DAO_NhanVien {
             if (d == null) d = LocalDate.now();
             ps.setDate(5, java.sql.Date.valueOf(d));
 
-            ps.setString(6, nv.getChucVu());
+            ps.setString(6, nv.getChucVu().toDbValue());
             ps.setString(7, nv.getMaNV());
 
             return ps.executeUpdate() > 0;
@@ -331,7 +334,9 @@ public class DAO_NhanVien {
                     String sdt = rs.getString(6);
                     LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
                     String chucVu = rs.getString(8);
-                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu);
+                    ChucVu cv = ChucVu.valueOf(chucVu);
+
+                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, cv);
                 }
             }
         } catch (SQLException e) {
@@ -339,5 +344,83 @@ public class DAO_NhanVien {
         }
         return null;
     }
+
+    public NhanVien checkLogin(String username, String password) {
+        // Nếu mật khẩu null ⇒ không cho đăng nhập
+        if (password == null) {
+            return null;
+        }
+
+        String sql = "SELECT maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu, matKhau, matKhauKichHoat "
+                + "FROM NhanVien WHERE maNV = ?";
+        Connection con = ConnectDB.getCon();
+        if (con == null) return null;
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String matKhau = rs.getString("matKhau");
+                    String matKhauKichHoat = rs.getString("matKhauKichHoat");
+
+                    boolean matchNormal     = matKhau != null && matKhau.equals(password);
+                    boolean matchActivation = matKhauKichHoat != null && matKhauKichHoat.equals(password);
+
+                    if (!matchNormal && !matchActivation) {
+                        return null;
+                    }
+
+                    String maNV = rs.getString("maNV");
+                    String tenNV = rs.getString("tenNV");
+                    boolean gioiTinh = rs.getBoolean("gioiTinh");
+                    String email = rs.getString("email");
+                    String sdt = rs.getString("sdt");
+                    LocalDate ngayTaoTaiKhoan = rs.getDate("ngayTaoTaiKhoan").toLocalDate();
+                    String chucVu = rs.getString("chucVu");
+                    ChucVu cv = ChucVu.valueOf(chucVu);
+                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, cv);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi kiểm tra đăng nhập: " + e.getMessage());
+        }
+        return null;
+    }
+
+
+    public boolean isLoginWithActivationPassword(String username, String password) {
+        if (password == null) return false;
+
+        String sql = "SELECT 1 FROM NhanVien WHERE maNV = ? AND matKhauKichHoat = ?";
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi kiểm tra mật khẩu kích hoạt: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean changePasswordFromActivation(String maNV, String activationCode, String newPassword) {
+        String sql = "UPDATE NhanVien SET matKhau=?, matKhauKichHoat=NULL WHERE maNV=? AND matKhauKichHoat=?";
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, newPassword);
+            ps.setString(2, maNV);
+            ps.setString(3, activationCode);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi đổi mật khẩu lần đầu: " + e.getMessage());
+        }
+        return false;
+    }
+
 
 }

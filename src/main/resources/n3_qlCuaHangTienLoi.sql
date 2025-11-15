@@ -47,8 +47,8 @@ CREATE TABLE NhanVien (
                           tenNV NVARCHAR(100),
                           matKhau NVARCHAR(100),
                           gioiTinh BIT,
-                          email NVARCHAR(100),
-                          sdt NVARCHAR(15),
+                          email NVARCHAR(100) UNIQUE,
+                          sdt NVARCHAR(15) UNIQUE,
                           ngayTaoTaiKhoan DATE DEFAULT GETDATE(),
                           chucVu NVARCHAR(20),
                           FOREIGN KEY (chucVu) REFERENCES ChucVu(chucVu)

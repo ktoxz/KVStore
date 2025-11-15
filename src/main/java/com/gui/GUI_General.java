@@ -1,11 +1,14 @@
 package com.gui;
 
+import com.entity.NhanVien;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class GUI_General extends JPanel {
+    private NhanVien nhanVien;
     private JPanel contentPanel;
     private JPanel currentTabPanel;
     private TAB_KhuyenMai tabKhuyenMai;
@@ -16,32 +19,54 @@ public class GUI_General extends JPanel {
     private TAB_SanPham tabSanPham;
     private TAB_ManHinhChinh tabManHinhChinh;
 
-    public GUI_General() {
+    public GUI_General(NhanVien nhanVien) {
+        if(nhanVien == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Lỗi: Nhân viên không hợp lệ!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        this.nhanVien = nhanVien;
         initComponents();
     }
 
     private void initComponents() {
         setLayout(new BorderLayout());
+
         tabKhuyenMai = new TAB_KhuyenMai();
         tabHuongDan = new TAB_HuongDan();
         tabKhachHang = new TAB_KhachHang();
-        tabBanHang = new TAB_BanHang();
+        tabBanHang = new TAB_BanHang(nhanVien);
         tabNhanVien = new TAB_NhanVien();
         tabSanPham = new TAB_SanPham();
         tabManHinhChinh = new TAB_ManHinhChinh();
+        tabManHinhChinh.setNhanVien(nhanVien);
 
-
-        // ===== HEADER PANEL (1/5 chiều cao) =====
+        // ================= HEADER PANEL =================
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(0, 122, 255));
         headerPanel.setPreferredSize(new Dimension(0, 80));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 30, 15, 30));
 
-        // Tên ứng dụng
+        // ===== App name =====
         JLabel lblAppName = new JLabel("KVStore - Hệ thống quản lý cửa hàng");
         lblAppName.setFont(new Font("Segoe UI", Font.BOLD, 24));
         lblAppName.setForeground(Color.WHITE);
         headerPanel.add(lblAppName, BorderLayout.WEST);
+
+        // ================= HEADER RIGHT (Xin chào + Đăng xuất) =================
+        JPanel headerRight = new JPanel();
+        headerRight.setOpaque(false);
+        headerRight.setLayout(new BoxLayout(headerRight, BoxLayout.X_AXIS));
+
+        // Lời chào
+        String ten = nhanVien != null ? nhanVien.getTenNV() : "";
+        String chucVu = (nhanVien != null && nhanVien.getChucVu() != null) ? nhanVien.getChucVu().toString() : "";
+
+        JLabel lblHello = new JLabel("Xin chào, " + ten + (chucVu.isEmpty() ? "" : " (" + chucVu + ")"));
+        lblHello.setForeground(Color.WHITE);
+        lblHello.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         // Nút đăng xuất
         JButton btnLogout = new JButton("Đăng xuất");
@@ -51,37 +76,38 @@ public class GUI_General extends JPanel {
         btnLogout.setFocusPainted(false);
         btnLogout.setPreferredSize(new Dimension(120, 40));
         btnLogout.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnLogout.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                handleLogout();
-            }
-        });
-        headerPanel.add(btnLogout, BorderLayout.EAST);
+        btnLogout.addActionListener(e -> handleLogout());
+
+        // Thêm vào headerRight
+        headerRight.add(lblHello);
+        headerRight.add(Box.createHorizontalStrut(15));  // khoảng cách giữa text & nút
+        headerRight.add(btnLogout);
+
+        // Gắn vào header phải
+        headerPanel.add(headerRight, BorderLayout.EAST);
 
         add(headerPanel, BorderLayout.NORTH);
 
-        // ===== SIDEBAR PANEL (1/5 chiều rộng) =====
+        // ================= SIDEBAR PANEL =================
         JPanel sidebarPanel = new JPanel();
         sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
         sidebarPanel.setBackground(new Color(245, 248, 255));
         sidebarPanel.setPreferredSize(new Dimension(250, 0));
         sidebarPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(200, 200, 200)));
 
-        // Thêm các tab button vào sidebar
         addTabButtons(sidebarPanel);
-
         add(sidebarPanel, BorderLayout.WEST);
 
-        // ===== CONTENT PANEL (phần còn lại) =====
+        // ================= CONTENT PANEL =================
         contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(Color.WHITE);
 
-        // Mặc định hiển thị màn hình chính mới
+        // Mặc định hiển thị màn hình chính
         showTab(tabManHinhChinh);
 
         add(contentPanel, BorderLayout.CENTER);
     }
+
 
     private void addTabButtons(JPanel sidebarPanel) {
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 20)));
@@ -179,7 +205,9 @@ public class GUI_General extends JPanel {
         }
 
         if(tabPanel instanceof TAB_ManHinhChinh) {
-            ((TAB_ManHinhChinh) tabPanel).reloadData();
+            ((TAB_ManHinhChinh) tabPanel).setNhanVien(nhanVien);
+        } else if (tabPanel instanceof TAB_BanHang) {
+            ((TAB_BanHang) tabPanel).setNhanVien(nhanVien);
         }
 
         // Hiển thị tab mới

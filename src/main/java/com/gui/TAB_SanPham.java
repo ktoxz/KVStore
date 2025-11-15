@@ -758,6 +758,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			currentKeyword = "";
 			txtSearch.setText("");
 			selectRowById(ma);
+			JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+
 			return;
 		}
 
