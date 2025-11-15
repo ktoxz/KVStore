@@ -688,9 +688,10 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			}
 			
 			SanPham sp = new SanPham(ma, ten, gia, moTa, path, active, loai);
-			dao.deleteSanPham(ma);
-			dao.insertSanPham(sp);
-
+			if (!dao.updateSanPham(sp)) {
+				JOptionPane.showMessageDialog(this, "Cập nhật sản phẩm thất bại!");
+				return;
+			}
 			// Sau khi sửa: bỏ lọc, nhảy về sản phẩm vừa sửa
 			currentKeyword = "";
 			txtSearch.setText("");
@@ -709,7 +710,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			int isXoa = JOptionPane.showConfirmDialog(this, "Bạn thật sự muốn xoá không?", "Xác nhận",
 					JOptionPane.YES_NO_OPTION);
 			
-			if (isXoa == JOptionPane.NO_OPTION)
+			if ((isXoa == JOptionPane.NO_OPTION) || (isXoa == JOptionPane.CLOSED_OPTION))
 				return;
 			
 			if (!dao.deleteSanPham(ma)) {
