@@ -179,7 +179,7 @@ public class DAO_HoaDon {
                 HoaDon hd = new HoaDon(maHD, ngayGD, tienKhach, thue, null, null);
 
                 if (maKH != null) {
-                    KhachHang kh = new KhachHang(maKH);
+                    KhachHang kh = daoKH.timKiemKHById(maKH);
                     hd.setKhachHang(kh);
                 }
                 if (maNhanVien != null) {

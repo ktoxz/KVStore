@@ -232,7 +232,7 @@ public class DAO_CT_KhuyenMai {
     public CT_KhuyenMai findBestForProduct(String maSP) {
         List<CT_KhuyenMai> list = findBySanPham(maSP);
         if (list.isEmpty()) return null;
-        
+
         return list.stream()
                 .max((a, b) -> Double.compare(a.getGiaTri(), b.getGiaTri()))
                 .orElse(null);

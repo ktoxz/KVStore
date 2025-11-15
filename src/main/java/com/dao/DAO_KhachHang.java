@@ -161,6 +161,39 @@ public class DAO_KhachHang {
 	    }
 	    return kh; 
 	}
+
+	public KhachHang timKiemKHById(String id) {
+		KhachHang kh = null;
+		ConnectDB.getInstance();
+		Connection con = ConnectDB.getCon();
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = con.prepareStatement("SELECT * FROM KhachHang WHERE maKH = ?");
+			stmt.setString(1, id);
+			rs = stmt.executeQuery();
+			if (rs.next()) {
+				kh = new KhachHang(
+						rs.getString(1),          // maKH
+						rs.getString(2),          // tenKH
+						rs.getBoolean(3),         // gioiTinh
+						rs.getString(4),          // sdt
+						rs.getDate(5).toLocalDate(), // ngayTaoTK
+						rs.getInt(6)              // diemTichLuy
+				);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (rs != null) rs.close();
+				if (stmt != null) stmt.close();
+			} catch (SQLException e2) {
+				e2.printStackTrace();
+			}
+		}
+		return kh;
+	}
 	
 	/**
 	 * Cập nhật điểm tích lũy cho khách hàng
