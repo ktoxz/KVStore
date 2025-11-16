@@ -194,7 +194,7 @@ GO
 -- DATA MẪU CHO BẢNG NHÂN VIÊN (30 NHÂN VIÊN)
 -- ============================================
 INSERT INTO NhanVien (maNV, tenNV, matKhau, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu) VALUES
-(N'NV001', N'Nguyễn Văn An',        N'123456', 1, N'an.nguyen@store.vn',        N'0901000001', '2025-01-01', N'QUANLY'),
+(N'NV001', N'Nguyễn Văn An',        N'123', 1, N'an.nguyen@store.vn',        N'0901000001', '2025-01-01', N'QUANLY'),
 (N'NV002', N'Trần Thị Bích',        N'123456', 0, N'bich.tran@store.vn',        N'0901000002', '2025-01-02', N'THUNGAN'),
 (N'NV003', N'Lê Hoàng Nam',         N'123456', 1, N'nam.le@store.vn',           N'0901000003', '2025-01-03', N'THUNGAN'),
 (N'NV004', N'Phạm Thu Trang',       N'123456', 0, N'trang.pham@store.vn',       N'0901000004', '2025-01-04', N'THUNGAN'),

@@ -7,17 +7,28 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
+import java.awt.Desktop;
+
 import com.dao.DAO_SanPham;
 import com.entity.SanPham;
 import com.enums.LoaiSP;
 import com.service.TabStyler;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.border.TitledBorder;
 import javax.swing.border.Border;
@@ -43,7 +54,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	JComboBox<LoaiSP> cboLoai;
 	JTextArea txtMoTa;
 	JCheckBox chkActive;
-	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh;
+	JButton btnThem, btnLuu, btnXoa, btnXoaTrang, btnTim, btnChonAnh, btnXoaAnh,
+    	btnFileMau, btnNhapExcel, btnXuatExcel;
 	JTable tbl;
 	DefaultTableModel mdl;
 	JLabel lblPreview;
@@ -411,6 +423,25 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		tcm.getColumn(0).setMaxWidth(THUMB_W + 24);
 		
 		JPanel wrap = new JPanel(new BorderLayout());
+
+		// thanh nút Excel (bên trong viền, trên bảng, canh trái)
+		JPanel pnlExcelButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+		pnlExcelButtons.setBorder(new EmptyBorder(0, 0, 4, 0)); // tạo khoảng cách với bảng
+
+		btnFileMau = new JButton("CSV mẫu");
+		styleButton(btnFileMau, CLR_MUTED, CLR_TEXT_LIGHT);
+
+		btnNhapExcel = new JButton("Nhập CSV");
+		styleButton(btnNhapExcel, CLR_PRIMARY, CLR_TEXT_LIGHT);
+
+		btnXuatExcel = new JButton("Xuất CSV");
+		styleButton(btnXuatExcel, CLR_PRIMARY.darker(), CLR_TEXT_LIGHT);
+
+		pnlExcelButtons.add(btnFileMau);
+		pnlExcelButtons.add(btnNhapExcel);
+		pnlExcelButtons.add(btnXuatExcel);
+
+		wrap.add(pnlExcelButtons, BorderLayout.NORTH);
 		wrap.add(sp, BorderLayout.CENTER);
 
 		pnlPaging = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 6));
@@ -647,6 +678,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	    txtSearch.addActionListener(this);
 	    btnChonAnh.addActionListener(this);
 	    btnXoaAnh.addActionListener(this);
+	    btnFileMau.addActionListener(this);
+	    btnXuatExcel.addActionListener(this);
+	    btnNhapExcel.addActionListener(this);
 
 	    // === Bộ lọc dưới thanh tìm kiếm ===
 	    if (btnResetBoLoc != null) {
@@ -926,7 +960,366 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			txtPathAnh.setText("");
 			lblPreview.setIcon(scaledOrPlaceholder(null, PREVIEW_W, PREVIEW_H));
 		}
+		
+		if (o.equals(btnFileMau)) {
+            exportTemplateCsv();
+            return;
+        }
+		
+		if (o.equals(btnXuatExcel)) {
+		    exportCurrentFilterToCsv();
+		    return;
+		}
+		
+		if (o.equals(btnNhapExcel)) {
+            importFromCsv();
+            return;
+        }
 	}
+	
+    // ====== Nhập sản phẩm từ CSV (mở bằng Excel) ======
+    private void importFromCsv() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Chọn file CSV để nhập sản phẩm");
+        fc.setFileFilter(new FileNameExtensionFilter("File CSV (*.csv)", "csv"));
+
+        int ret = fc.showOpenDialog(this);
+        if (ret != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File file = fc.getSelectedFile();
+        if (file == null || !file.exists()) {
+            JOptionPane.showMessageDialog(this, "File không tồn tại!", "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int added = 0;
+        int skipped = 0;
+        Set<String> tenSeen = new HashSet<>();  // tránh trùng ngay trong 1 lần import
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            boolean first = true;
+
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                // bỏ qua dòng header đầu tiên
+                if (first) {
+                    first = false;
+                    continue;
+                }
+
+                java.util.List<String> cols = parseCsvLine(line);
+                if (cols.size() < 7) {
+                    skipped++;
+                    continue;
+                }
+
+                // Cột trong file: 0: MaSP (BỎ QUA), 1: TenSP, 2: Gia, 3: MoTa, 4: LoaiSP, 5: TrangThai, 6: HinhAnh
+
+                String ten = cols.get(1).trim();
+                if (ten.isEmpty()) {
+                    skipped++;
+                    continue;
+                }
+
+                String tenKey = ten.toLowerCase();
+
+                // trùng trong chính file import
+                if (tenSeen.contains(tenKey)) {
+                    skipped++;
+                    continue;
+                }
+
+                // trùng trong DB
+                if (dao.existsTenSanPham(ten)) {
+                    skipped++;
+                    continue;
+                }
+
+                // giá
+                double gia;
+                try {
+                    gia = Double.parseDouble(cols.get(2).trim());
+                } catch (Exception ex) {
+                    skipped++;
+                    continue;
+                }
+
+                String moTa = cols.get(3).trim();
+                String loaiRaw = cols.get(4).trim();
+                if (loaiRaw.isEmpty()) {
+                    skipped++;
+                    continue;
+                }
+
+                LoaiSP loaiEnum = LoaiSP.fromAny(loaiRaw);
+                if (loaiEnum == null) {
+                    skipped++;
+                    continue;
+                }
+                String loai = loaiEnum.toDbValue();
+
+                String ttRaw = cols.get(5).trim();
+                boolean tinhTrang = "1".equals(ttRaw) || "true".equalsIgnoreCase(ttRaw);
+
+                String hinh = cols.get(6).trim();
+                if (hinh.isEmpty()) {
+                    hinh = null;
+                }
+
+                // KHÔNG dùng mã trong file, luôn sinh mã mới
+                String ma = nextIdFromDB();
+
+                SanPham sp = new SanPham(ma, ten, gia, moTa, hinh, tinhTrang, loai);
+                if (dao.insertSanPham(sp)) {
+                    added++;
+                    tenSeen.add(tenKey);
+                } else {
+                    skipped++;
+                }
+            }
+
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Lỗi khi đọc file CSV:\n" + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JOptionPane.showMessageDialog(this,
+                "Đã thêm " + added + " sản phẩm mới.\n" +
+                "Bỏ qua " + skipped + " dòng (trùng tên hoặc dữ liệu không hợp lệ).",
+                "Kết quả nhập",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        if (added > 0) {
+            currentPage = 1;
+            reloadTable();   // reload lại danh sách theo bộ lọc hiện tại
+        }
+    }
+	
+    // Parse 1 dòng CSV -> list cột, có hỗ trợ dấu ngoặc kép và dấu phẩy trong text
+    private java.util.List<String> parseCsvLine(String line) {
+        java.util.List<String> cols = new ArrayList<>();
+        if (line == null) return cols;
+
+        StringBuilder sb = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                // xử lý "" => "
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    sb.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                cols.add(sb.toString());
+                sb.setLength(0);
+            } else {
+                sb.append(c);
+            }
+        }
+        cols.add(sb.toString());
+        return cols;
+    }
+
+	
+    // ====== Xuất CSV theo bộ lọc hiện tại ======
+    private void exportCurrentFilterToCsv() {
+        // đọc lại bộ lọc giống reloadTable()
+        String loaiFilter = null;
+        Boolean trangThaiFilter = null;
+        Double giaMin = null;
+        Double giaMax = null;
+
+        if (cboLocLoai != null) {
+            LoaiSP loaiEnumLoc = (LoaiSP) cboLocLoai.getSelectedItem();
+            if (loaiEnumLoc != null) {
+                loaiFilter = loaiEnumLoc.toDbValue();
+            }
+        }
+
+        if (cboLocTrangThai != null) {
+            Object v = cboLocTrangThai.getSelectedItem();
+            if (v instanceof String) {
+                String s = (String) v;
+                if ("Còn bán".equals(s)) {
+                    trangThaiFilter = Boolean.TRUE;
+                } else if ("Ngừng bán".equals(s)) {
+                    trangThaiFilter = Boolean.FALSE;
+                }
+                // "Tất cả" => null
+            }
+        }
+
+        if (txtGiaMin != null) {
+            String s = txtGiaMin.getText().trim();
+            if (!s.isEmpty()) {
+                double v = parseGia(s);
+                if (v < 0) {
+                    JOptionPane.showMessageDialog(this, "Giá tối thiểu không hợp lệ!");
+                    txtGiaMin.requestFocus();
+                    return;
+                }
+                giaMin = v;
+            }
+        }
+
+        if (txtGiaMax != null) {
+            String s = txtGiaMax.getText().trim();
+            if (!s.isEmpty()) {
+                double v = parseGia(s);
+                if (v < 0) {
+                    JOptionPane.showMessageDialog(this, "Giá tối đa không hợp lệ!");
+                    txtGiaMax.requestFocus();
+                    return;
+                }
+                giaMax = v;
+            }
+        }
+
+        // chọn nơi lưu file
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Lưu danh sách sản phẩm (CSV)");
+        fc.setSelectedFile(new File("DanhSachSanPham.csv"));
+        fc.setFileFilter(new FileNameExtensionFilter("File CSV (*.csv)", "csv"));
+
+        int ret = fc.showSaveDialog(this);
+        if (ret != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File file = fc.getSelectedFile();
+        String path = file.getAbsolutePath();
+        if (!path.toLowerCase().endsWith(".csv")) {
+            file = new File(path + ".csv");
+        }
+
+        if (file.exists()) {
+            int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "File đã tồn tại, bạn có muốn ghi đè không?",
+                    "Xác nhận",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (choice != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        // gọi DAO export
+        int count = dao.exportSanPhamToCsv(
+                file,
+                currentKeyword,
+                loaiFilter,
+                trangThaiFilter,
+                giaMin,
+                giaMax
+        );
+
+        if (count >= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + count + " sản phẩm ra file:\n" + file.getName(),
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            // mở luôn file vừa xuất
+            try {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop desktop = Desktop.getDesktop();
+                    if (desktop.isSupported(Desktop.Action.OPEN)) {
+                        desktop.open(file);
+                    }
+                }
+            } catch (IOException ex) {
+                System.err.println("Không thể mở file vừa xuất: " + ex.getMessage());
+            }
+
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Có lỗi khi xuất dữ liệu!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+
+    }
+
+	
+    // ====== File mẫu (CSV) cho nhập sản phẩm ======
+    private void exportTemplateCsv() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Lưu file mẫu nhập sản phẩm");
+        fc.setSelectedFile(new File("MauNhapSanPham.csv"));
+        fc.setFileFilter(new FileNameExtensionFilter("File CSV (*.csv)", "csv"));
+
+        int ret = fc.showSaveDialog(this);
+        if (ret != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File file = fc.getSelectedFile();
+        String path = file.getAbsolutePath();
+        if (!path.toLowerCase().endsWith(".csv")) {
+            file = new File(path + ".csv");
+        }
+
+        if (file.exists()) {
+            int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "File đã tồn tại, bạn có muốn ghi đè không?",
+                    "Xác nhận",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (choice != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
+
+            out.println("MaSP,TenSP,Gia,MoTa,LoaiSP,TrangThai,HinhAnh");
+            out.println("SP001,Gạo ST25,18000,Gạo thơm dẻo đặc sản Sóc Trăng,DoAn,1,gao_st25.jpg");
+            out.println("SP002,Mì Hảo Hảo tôm chua cay,4500,Mì ăn liền vị tôm chua cay,DoAn,1,mihaohao.jpg");
+            out.println("SP003,Bánh Oreo 137g,21000,Bánh quy kem socola,DoAn,1,oreo137.jpg");
+            out.println("SP004,Phô mai Con Bò Cười 8 miếng,44000,Phô mai béo ngậy, bổ sung canxi,DoAn,1,phomai_conboc.jpg");
+            out.println("SP005,Cà phê G7 3in1 hộp 18 gói,56000,Cà phê hòa tan đậm đà hương vị Việt,DoAn,1,cafe_g7_3in1.jpg");
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã tạo file mẫu: " + file.getName(),
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            
+            // tự động mở file mẫu sau khi tạo xong
+            try {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop desktop = Desktop.getDesktop();
+                    if (desktop.isSupported(Desktop.Action.OPEN)) {
+                        desktop.open(file);
+                    }
+                }
+            } catch (IOException ex2) {
+                // không cần báo lỗi ầm ĩ, log nhẹ là được
+                System.err.println("Không thể mở file mẫu: " + ex2.getMessage());
+            }
+
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Lỗi khi ghi file mẫu:\n" + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
 
 	// ====== Mouse ======
 	public void mouseClicked(MouseEvent e) {

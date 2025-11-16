@@ -2,6 +2,10 @@ package com.dao;
 
 import com.entity.SanPham;
 import com.connectDB.ConnectDB;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -163,6 +167,119 @@ public class DAO_SanPham {
 
 		return ds;
 	}
+	
+    // xuất toàn bộ sản phẩm theo bộ lọc ra CSV
+    public int exportSanPhamToCsv(File file,
+                                  String keyword,
+                                  String loaiFilter,
+                                  Boolean trangThaiFilter,
+                                  Double giaMin,
+                                  Double giaMax) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return 0;
+
+        StringBuilder sql = new StringBuilder("SELECT * FROM SanPham WHERE 1 = 1");
+        ArrayList<Object> params = new ArrayList<>();
+
+        // từ khóa chung
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (maSP LIKE ?")
+               .append(" OR tenSP LIKE ?")
+               .append(" OR moTaSP LIKE ?")
+               .append(" OR loaiSP LIKE ?")
+               .append(" OR CAST(giaSP AS NVARCHAR(50)) LIKE ?")
+               .append(" OR (CASE WHEN tinhTrangSP = 1 THEN N'Đang hoạt động' ELSE N'Ngừng' END) LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            for (int i = 0; i < 6; i++) {
+                params.add(kw);
+            }
+        }
+
+        // lọc theo loại
+        if (loaiFilter != null && !loaiFilter.trim().isEmpty()) {
+            sql.append(" AND loaiSP = ?");
+            params.add(loaiFilter);
+        }
+
+        // lọc theo trạng thái
+        if (trangThaiFilter != null) {
+            sql.append(" AND tinhTrangSP = ?");
+            params.add(trangThaiFilter ? 1 : 0);
+        }
+
+        // lọc theo giá
+        if (giaMin != null) {
+            sql.append(" AND giaSP >= ?");
+            params.add(giaMin);
+        }
+        if (giaMax != null) {
+            sql.append(" AND giaSP <= ?");
+            params.add(giaMax);
+        }
+
+        sql.append(" ORDER BY maSP");
+
+        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                if (p instanceof String) {
+                    ps.setString(idx++, (String) p);
+                } else if (p instanceof Integer) {
+                    ps.setInt(idx++, (Integer) p);
+                } else if (p instanceof Double) {
+                    ps.setDouble(idx++, (Double) p);
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery();
+                 PrintWriter out = new PrintWriter(new FileWriter(file))) {
+
+                // header
+                out.println("MaSP,TenSP,Gia,MoTa,LoaiSP,TrangThai,HinhAnh");
+
+                int cnt = 0;
+                while (rs.next()) {
+                    String ma = rs.getString("maSP");
+                    String ten = rs.getString("tenSP");
+                    double gia = rs.getDouble("giaSP");
+                    String moTa = rs.getString("moTaSP");
+                    String loai = rs.getString("loaiSP");
+                    boolean tt = rs.getBoolean("tinhTrangSP");
+                    String anh = rs.getString("hinhAnhSP");
+
+                    String line =
+                            escapeCsv(ma) + "," +
+                            escapeCsv(ten) + "," +
+                            gia + "," +
+                            escapeCsv(moTa) + "," +
+                            escapeCsv(loai) + "," +
+                            (tt ? "1" : "0") + "," +
+                            escapeCsv(anh);
+
+                    out.println(line);
+                    cnt++;
+                }
+                return cnt;
+            }
+        } catch (Exception ex) {
+            System.err.println("Lỗi exportSanPhamToCsv: " + ex.getMessage());
+        }
+
+        return 0;
+    }
+
+    // escape đơn giản cho CSV
+    private String escapeCsv(String v) {
+        if (v == null) return "";
+        String s = v;
+        boolean needQuote = s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r");
+        s = s.replace("\"", "\"\"");
+        if (needQuote) {
+            s = "\"" + s + "\"";
+        }
+        return s;
+    }
+
 
 	// =========================
 	// THÊM SẢN PHẨM
@@ -458,4 +575,26 @@ public class DAO_SanPham {
 		}
 		return ds;
 	}
+	
+    // =========================
+    //  KIỂM TRA TÊN SẢN PHẨM ĐÃ TỒN TẠI CHƯA
+    // =========================
+    public boolean existsTenSanPham(String tenSP) {
+        Connection con = ConnectDB.getCon();
+        if (con == null) return false;
+
+        String sql = "SELECT COUNT(*) FROM SanPham WHERE tenSP = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, tenSP);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi kiểm tra trùng tên sản phẩm: " + e.getMessage());
+        }
+        return false;
+    }
+
 }
