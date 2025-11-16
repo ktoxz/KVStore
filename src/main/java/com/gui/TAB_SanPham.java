@@ -50,6 +50,13 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	DefaultTableModel mdl;
 	JLabel lblPreview;
 	
+	// Bộ lọc dưới thanh tìm kiếm
+	private JComboBox<LoaiSP> cboLocLoai;
+	private JComboBox<String> cboLocTrangThai;
+	private JTextField txtGiaMin;
+	private JTextField txtGiaMax;
+	private JButton btnResetBoLoc;
+	
 	// Paging (SQL-based)
 	int pageSize = 10, currentPage = 1, totalPages = 1, totalRows = 0;
 	String currentKeyword = "";
@@ -58,7 +65,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	
 	// Sizes
-	static final int THUMB_W = 61, THUMB_H = 61, PREVIEW_W = 400, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
+	static final int THUMB_W = 58, THUMB_H = 58, PREVIEW_W = 380, PREVIEW_H = 240, FORM_FIELD_W = 240, BTN_H = 32;
 	
 	// link dir
 	private static final String IMG_DIR = "src/main/resources/sp_image";
@@ -213,6 +220,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 	private JComponent buildNorthSearch() {
 		
+//		Panel dòng 1: tìm kiếm
 		JPanel p = new JPanel(new BorderLayout(8, 0));
 		txtSearch = new JTextField();
 		btnTim = new JButton("Tìm");
@@ -222,7 +230,61 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		p.add(txtSearch, BorderLayout.CENTER);
 		p.add(btnTim, BorderLayout.EAST);
 		
-		return p;
+		// === Khởi tạo combobox lọc loại sản phẩm ===
+		cboLocLoai = new JComboBox<>();
+		cboLocLoai.addItem(null); // null = Tất cả loại
+		for (LoaiSP loai : LoaiSP.values()) {
+		    cboLocLoai.addItem(loai);
+		}
+		// Renderer để hiện chữ "Tất cả loại" khi item = null
+		cboLocLoai.setRenderer(new DefaultListCellRenderer() {
+		    @Override
+		    public Component getListCellRendererComponent(
+		            JList<?> list, Object value, int index,
+		            boolean isSelected, boolean cellHasFocus) {
+		        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+		        if (value == null) {
+		            setText("Tất cả loại");
+		        }
+		        return this;
+		    }
+		});
+
+		// === Combobox lọc trạng thái kinh doanh ===
+		cboLocTrangThai = new JComboBox<>(new String[] {
+		    "Tất cả", "Còn bán", "Ngừng bán"
+		});
+
+		// === Ô nhập khoảng giá ===
+		txtGiaMin = new JTextField(6);
+		txtGiaMax = new JTextField(6);
+
+		// === Nút xóa bộ lọc ===
+		btnResetBoLoc = new JButton("Xóa bộ lọc");
+		
+		// Panel dòng 2: các bộ lọc
+		JPanel pnlDongBoLoc = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+		pnlDongBoLoc.add(new JLabel("Loại:"));
+		pnlDongBoLoc.add(cboLocLoai);
+
+		pnlDongBoLoc.add(new JLabel("Trạng thái:"));
+		pnlDongBoLoc.add(cboLocTrangThai);
+
+		pnlDongBoLoc.add(new JLabel("Giá:"));
+		pnlDongBoLoc.add(txtGiaMin);
+		pnlDongBoLoc.add(new JLabel("-"));
+		pnlDongBoLoc.add(txtGiaMax);
+
+		pnlDongBoLoc.add(btnResetBoLoc);
+		
+		// Panel tổng: xếp dọc 2 dòng trên
+		JPanel pnlTimKiemVaBoLoc = new JPanel();
+		pnlTimKiemVaBoLoc.setLayout(new BoxLayout(pnlTimKiemVaBoLoc, BoxLayout.Y_AXIS));
+		pnlTimKiemVaBoLoc.add(p);
+		pnlTimKiemVaBoLoc.add(Box.createVerticalStrut(4)); // khoảng cách nhỏ
+		pnlTimKiemVaBoLoc.add(pnlDongBoLoc);
+		
+		return pnlTimKiemVaBoLoc;
 	}
 
 	private JComponent buildCenterTable() {
