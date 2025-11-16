@@ -23,7 +23,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ArrayList; // added
 
-public class TAB_BanHang extends JPanel {
+public class TAB_BanHang extends JPanel implements TabStyleSupport {
 
     private JLabel lblName;
     private JLabel lblDiem;
@@ -88,7 +88,7 @@ public class TAB_BanHang extends JPanel {
         setBackground(Color.WHITE);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        add(TabStyler.createHeader("BÁN HÀNG"), BorderLayout.NORTH);
+        add(createHeader("BÁN HÀNG"), BorderLayout.NORTH);
 
         // ===== SPLIT CHÍNH =====
         JSplitPane splitMain = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -914,7 +914,7 @@ public class TAB_BanHang extends JPanel {
         splitMain.setLeftComponent(pnlLeft);
         splitMain.setRightComponent(pnlRight);
         add(splitMain, BorderLayout.CENTER);
-        TabStyler.applyContentFont(splitMain);
+        applyContentFont(splitMain);
         
         // Khởi tạo mặc định
         txtName.setText("Khách vãng lai");

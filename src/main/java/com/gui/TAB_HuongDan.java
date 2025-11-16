@@ -4,14 +4,14 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
-public class TAB_HuongDan extends JPanel {
+public class TAB_HuongDan extends JPanel implements TabStyleSupport {
 
     public TAB_HuongDan() {
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        add(TabStyler.createHeader("HƯỚNG DẪN SỬ DỤNG"), BorderLayout.NORTH);
+        add(createHeader("HƯỚNG DẪN SỬ DỤNG"), BorderLayout.NORTH);
 
         JTextArea txtGuide = new JTextArea();
         txtGuide.setEditable(false);
@@ -29,6 +29,6 @@ public class TAB_HuongDan extends JPanel {
         scrollPane.getViewport().setOpaque(false);
         add(scrollPane, BorderLayout.CENTER);
 
-        TabStyler.applyContentFont(this);
+        applyContentFont(this);
     }
 }

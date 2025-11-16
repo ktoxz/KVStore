@@ -27,7 +27,7 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 
 
-public class TAB_SanPham extends JPanel implements ActionListener, MouseListener {
+public class TAB_SanPham extends JPanel implements ActionListener, MouseListener, TabStyleSupport {
 	
 	DAO_SanPham dao;
 
@@ -80,7 +80,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
                 JPanel northWrapper = new JPanel(new BorderLayout());
                 northWrapper.setOpaque(false);
-                northWrapper.add(TabStyler.createHeader("QUẢN LÝ SẢN PHẨM"), BorderLayout.NORTH);
+                northWrapper.add(createHeader("QUẢN LÝ SẢN PHẨM"), BorderLayout.NORTH);
                 northWrapper.add(buildNorthSearch(), BorderLayout.CENTER);
                 add(northWrapper, BorderLayout.NORTH);
 		
@@ -109,7 +109,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		bindEvents();
 		setFormModeNew();
 		
-                TabStyler.applyContentFont(this);
+                applyContentFont(this);
 
         }
 	
@@ -204,7 +204,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	// build các tiểu cấu trúc
 	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
         private static Border createTitleBorder(String title, Color titleColor, float fontSizePt, int lineThickness) {
-            Font base = TabStyler.SECTION_FONT;
+            Font base = SECTION_FONT;
 
             return new CompoundBorder(
 	        new EmptyBorder(8, 8, 8, 8), // mép ngoài

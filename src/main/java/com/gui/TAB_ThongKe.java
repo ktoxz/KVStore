@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.text.SimpleDateFormat;
@@ -30,9 +32,12 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-public class TAB_ThongKe extends JPanel implements ActionListener {
+public class TAB_ThongKe extends JPanel implements ActionListener, TabStyleSupport {
     private final DecimalFormat moneyFormat = new DecimalFormat("#,###");
     private final DAO_ThongKe daoThongKe = new DAO_ThongKe();
+    private static final Color PRIMARY_COLOR = HEADER_COLOR;
+    private static final Color SUCCESS_COLOR = new Color(76, 175, 80);
+    private static final Color MUTED_COLOR = new Color(158, 158, 158);
 
     // Tạo 3 nhóm UI - 1 nhóm cho mỗi tab để tránh trùng lặp biến
     private final TabUI uiSanPham = new TabUI(TabType.SAN_PHAM);
@@ -44,19 +49,24 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
     public TAB_ThongKe() {
         setLayout(new BorderLayout(10,10));
         setBackground(Color.WHITE);
+        setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        add(TabStyler.createHeader("THỐNG KÊ DOANH THU"), BorderLayout.NORTH);
+        add(createHeader("THỐNG KÊ DOANH THU"), BorderLayout.NORTH);
 
         JTabbedPane tabCon = new JTabbedPane();
         tabCon.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        tabCon.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         tabCon.addTab("Thống kê doanh thu sản phẩm", createTabSanPham(uiSanPham));
         tabCon.addTab("Thống kê hóa đơn theo nhân viên", createTabHoaDon(uiHoaDon));
         tabCon.addTab("Thống kê khuyến mãi hiện tại", createTabKhuyenMai(uiKhuyenMai));
 
-        add(tabCon, BorderLayout.CENTER);
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.add(tabCon, BorderLayout.CENTER);
+        add(content, BorderLayout.CENTER);
 
-        TabStyler.applyContentFont(this);
+        applyContentFont(this);
     }
 
     private String formatDate(Date date) {
@@ -71,17 +81,15 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
         JPanel pWest = createLeftOverview(ui);
         JPanel pCenter = new JPanel(new BorderLayout(10,10));
-        pCenter.setBackground(Color.WHITE);
+        pCenter.setOpaque(false);
 
-        // Thanh tìm kiếm trên cùng
         JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        pSearch.setBackground(Color.WHITE);
+        pSearch.setOpaque(false);
+        pSearch.setBorder(new EmptyBorder(0, 0, 8, 0));
         JLabel lblTimKiem = new JLabel("Tìm kiếm:");
         ui.txtTimKiem = new JTextField(20);
         ui.btnTimKiem = new JButton("Tìm");
-        ui.btnTimKiem.setBackground(new Color(0, 90, 200));
-        ui.btnTimKiem.setForeground(Color.WHITE);
-        ui.btnTimKiem.setFocusPainted(false);
+        styleButton(ui.btnTimKiem, PRIMARY_COLOR, Color.WHITE);
         pSearch.add(lblTimKiem);
         pSearch.add(ui.txtTimKiem);
         pSearch.add(ui.btnTimKiem);
@@ -93,22 +101,32 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         };
         ui.table = new JTable(ui.tableModel);
         JScrollPane scrollSP = new JScrollPane(ui.table);
-        scrollSP.setBorder(TabStyler.createSectionBorder("Doanh thu theo sản phẩm"));
+        scrollSP.setBorder(new CompoundBorder(
+                createSectionBorder("Doanh thu theo sản phẩm"),
+                new EmptyBorder(10, 12, 12, 12)));
 
         ui.dataset = new DefaultCategoryDataset();
         JFreeChart chart = ChartFactory.createBarChart("Top sản phẩm bán chạy","Sản phẩm","Số lượng", ui.dataset);
         ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setBorder(new CompoundBorder(
+                createSectionBorder("Top sản phẩm bán chạy"),
+                new EmptyBorder(10, 12, 12, 12)));
+        chartPanel.setBackground(Color.WHITE);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollSP, chartPanel);
         splitPane.setResizeWeight(0.6);
         splitPane.setDividerSize(8);
+        splitPane.setBorder(null);
+        splitPane.setOpaque(false);
         pCenter.add(splitPane, BorderLayout.CENTER);
 
-        // PHÂN TRANG
         JPanel pPage = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        pPage.setOpaque(false);
         ui.btnPrev = new JButton("< Trang trước");
         ui.btnNext = new JButton("Trang sau >");
         ui.lblPage = new JLabel("Trang 1 / 1");
+        styleButton(ui.btnPrev, MUTED_COLOR, Color.WHITE);
+        styleButton(ui.btnNext, PRIMARY_COLOR, Color.WHITE);
         pPage.add(ui.btnPrev);
         pPage.add(ui.lblPage);
         pPage.add(ui.btnNext);
@@ -144,17 +162,15 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
         JPanel pWest = createLeftOverview(ui);
         JPanel pCenter = new JPanel(new BorderLayout(10,10));
-        pCenter.setBackground(Color.WHITE);
+        pCenter.setOpaque(false);
 
-        // Thanh tìm kiếm trên cùng
         JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        pSearch.setBackground(Color.WHITE);
+        pSearch.setOpaque(false);
+        pSearch.setBorder(new EmptyBorder(0, 0, 8, 0));
         JLabel lblTimKiem = new JLabel("Tìm kiếm:");
         ui.txtTimKiem = new JTextField(20);
         ui.btnTimKiem = new JButton("Tìm");
-        ui.btnTimKiem.setBackground(new Color(0, 90, 200));
-        ui.btnTimKiem.setForeground(Color.WHITE);
-        ui.btnTimKiem.setFocusPainted(false);
+        styleButton(ui.btnTimKiem, PRIMARY_COLOR, Color.WHITE);
         pSearch.add(lblTimKiem);
         pSearch.add(ui.txtTimKiem);
         pSearch.add(ui.btnTimKiem);
@@ -169,20 +185,18 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         };
         ui.table = new JTable(ui.tableModel);
         JScrollPane scroll = new JScrollPane(ui.table);
-        TitledBorder invoicesBorder = BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(new Color(0,90,200)),
-            "Thống kê hóa đơn theo nhân viên"
-        );
-        TabStyler.applySectionTitleFont(invoicesBorder);
-        scroll.setBorder(invoicesBorder);
+        TitledBorder invoicesBorder = createSectionBorder("Thống kê hóa đơn theo nhân viên");
+        scroll.setBorder(new CompoundBorder(invoicesBorder, new EmptyBorder(10, 12, 12, 12)));
 
         pCenter.add(scroll, BorderLayout.CENTER);
 
-        // PHÂN TRANG
         JPanel pPage = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        pPage.setOpaque(false);
         ui.btnPrev = new JButton("< Trang trước");
         ui.btnNext = new JButton("Trang sau >");
         ui.lblPage = new JLabel("Trang 1 / 1");
+        styleButton(ui.btnPrev, MUTED_COLOR, Color.WHITE);
+        styleButton(ui.btnNext, PRIMARY_COLOR, Color.WHITE);
         pPage.add(ui.btnPrev);
         pPage.add(ui.lblPage);
         pPage.add(ui.btnNext);
@@ -217,21 +231,19 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
     private JPanel createTabKhuyenMai(TabUI ui) {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBackground(Color.WHITE);
+        panel.setOpaque(false);
 
         JPanel pWest = createLeftOverview(ui);
         JPanel pCenter = new JPanel(new BorderLayout(10, 10));
-        pCenter.setBackground(Color.WHITE);
+        pCenter.setOpaque(false);
 
-        // Thanh tìm kiếm trên cùng (chuyển từ dưới lên trên)
         JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        pSearch.setBackground(Color.WHITE);
+        pSearch.setOpaque(false);
+        pSearch.setBorder(new EmptyBorder(0, 0, 8, 0));
         JLabel lblTimKiem = new JLabel("Tìm kiếm:");
         ui.txtTimKiem = new JTextField(20);
         ui.btnTimKiem = new JButton("Tìm");
-        ui.btnTimKiem.setBackground(new Color(0, 90, 200));
-        ui.btnTimKiem.setForeground(Color.WHITE);
-        ui.btnTimKiem.setFocusPainted(false);
+        styleButton(ui.btnTimKiem, PRIMARY_COLOR, Color.WHITE);
         pSearch.add(lblTimKiem);
         pSearch.add(ui.txtTimKiem);
         pSearch.add(ui.btnTimKiem);
@@ -247,19 +259,17 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         ui.table = new JTable(ui.tableModel);
 
         JScrollPane scroll = new JScrollPane(ui.table);
-        TitledBorder promoBorder = BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(new Color(0, 90, 200)),
-            "Khuyến mãi hiện hành"
-        );
-        TabStyler.applySectionTitleFont(promoBorder);
-        scroll.setBorder(promoBorder);
+        TitledBorder promoBorder = createSectionBorder("Khuyến mãi hiện hành");
+        scroll.setBorder(new CompoundBorder(promoBorder, new EmptyBorder(10, 12, 12, 12)));
         pCenter.add(scroll, BorderLayout.CENTER);
 
-        // PHÂN TRANG
         JPanel pPage = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        pPage.setOpaque(false);
         ui.btnPrev = new JButton("< Trang trước");
         ui.btnNext = new JButton("Trang sau >");
         ui.lblPage = new JLabel("Trang 1 / 1");
+        styleButton(ui.btnPrev, MUTED_COLOR, Color.WHITE);
+        styleButton(ui.btnNext, PRIMARY_COLOR, Color.WHITE);
         pPage.add(ui.btnPrev);
         pPage.add(ui.lblPage);
         pPage.add(ui.btnNext);
@@ -306,6 +316,15 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
             sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(keyword)));
         }
         ui.table.setRowSorter(sorter);
+    }
+
+    private void styleButton(JButton button, Color bg, Color fg) {
+        button.setBackground(bg);
+        button.setForeground(fg);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        button.setMargin(new Insets(6, 14, 6, 14));
     }
 
 
@@ -571,9 +590,10 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
     // Tạo phần left chung cho mỗi tab (nhưng từng instance UI riêng)
     private JPanel createLeftOverview(TabUI ui) {
         JPanel pWest = new JPanel(new GridBagLayout());
-        pWest.setBackground(Color.WHITE);
+        pWest.setOpaque(false);
+        pWest.setPreferredSize(new Dimension(320, 0));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8,8,8,8);
+        gbc.insets = new Insets(6,6,6,6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         Font font = new Font("Arial", Font.PLAIN, 16);
 
@@ -588,6 +608,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         gbc.gridx = 1; pWest.add(ui.denNgay, gbc);
 
         ui.btnThongKe = new JButton("Thống kê");
+        styleButton(ui.btnThongKe, PRIMARY_COLOR, Color.WHITE);
         gbc.gridx=0; gbc.gridy=2; gbc.gridwidth=2; pWest.add(ui.btnThongKe, gbc);
         ui.btnThongKe.addActionListener(this);
 
@@ -604,10 +625,13 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         gbc.gridx=0; gbc.gridy=5; pWest.add(lblTongDoanhThu, gbc); gbc.gridx=1; pWest.add(ui.txtTongDoanhThu, gbc);
 
         ui.btnXuat = new JButton("Xuất File");
+        styleButton(ui.btnXuat, SUCCESS_COLOR, Color.WHITE);
         gbc.gridx=0; gbc.gridy=6; gbc.gridwidth=2; pWest.add(ui.btnXuat, gbc);
         ui.btnXuat.addActionListener(this);
 
-        pWest.setBorder(TabStyler.createSectionBorder("Thống kê tổng quan"));
+        pWest.setBorder(new CompoundBorder(
+                createSectionBorder("Thống kê tổng quan"),
+                new EmptyBorder(10, 12, 12, 12)));
 
         return pWest;
     }

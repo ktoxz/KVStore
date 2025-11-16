@@ -15,25 +15,19 @@ import javax.swing.border.TitledBorder;
 import javax.swing.plaf.FontUIResource;
 
 /**
- * Helper utilities to keep all management tabs visually consistent.
+ * Reusable styling helpers so every management tab can align its header, fonts,
+ * and section borders without duplicating boilerplate.
  */
-public final class TabStyler {
-    private static final String HEADER_PROPERTY = "tabHeader";
+public interface TabStyleSupport {
+    String HEADER_PROPERTY = "tabHeader";
 
-    public static final Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 26);
-    public static final Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    public static final Font CONTENT_FONT = new Font("Segoe UI", Font.PLAIN, 14);
+    Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 26);
+    Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 18);
+    Font CONTENT_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
-    private static final Color HEADER_COLOR = new Color(0, 90, 200);
+    Color HEADER_COLOR = new Color(0, 90, 200);
 
-    private TabStyler() {
-        // utility
-    }
-
-    /**
-     * Creates a light-weight header that aligns the title on the top-left corner.
-     */
-    public static JPanel createHeader(String title) {
+    default JPanel createHeader(String title) {
         JLabel lblTitle = new JLabel(title);
         lblTitle.setFont(HEADER_FONT);
         lblTitle.setForeground(HEADER_COLOR);
@@ -46,11 +40,7 @@ public final class TabStyler {
         return header;
     }
 
-    /**
-     * Ensures every component inside the tab uses the shared content font unless it has
-     * been explicitly styled.
-     */
-    public static void applyContentFont(Component component) {
+    default void applyContentFont(Component component) {
         if (component == null) {
             return;
         }
@@ -71,20 +61,20 @@ public final class TabStyler {
         }
     }
 
-    public static void markCustomFont(JComponent component) {
+    default void markCustomFont(JComponent component) {
         if (component != null) {
             component.putClientProperty(HEADER_PROPERTY, Boolean.TRUE);
         }
     }
 
-    public static TitledBorder createSectionBorder(String title) {
+    default TitledBorder createSectionBorder(String title) {
         TitledBorder border = BorderFactory.createTitledBorder(title);
         border.setTitleFont(SECTION_FONT);
         border.setTitleColor(HEADER_COLOR);
         return border;
     }
 
-    public static void applySectionTitleFont(TitledBorder border) {
+    default void applySectionTitleFont(TitledBorder border) {
         if (border != null) {
             border.setTitleFont(SECTION_FONT);
             border.setTitleColor(HEADER_COLOR);

@@ -51,7 +51,7 @@ import java.util.concurrent.ExecutionException;
  * VÀ quay lại cách tô màu nút đơn giản (setBackground)
  * MỚI: Thêm phân trang và làm đẹp UI phân trang (Sử dụng FlatLaf bo tròn)
  */
-public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListener {
+public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListener, TabStyleSupport {
 
     // DAO
     private final DAO_KhuyenMai daoKM = new DAO_KhuyenMai();
@@ -156,7 +156,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         add(buildHeader(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
 
-        TabStyler.applyContentFont(this);
+        applyContentFont(this);
 
         bindEvents();
         loadLoaiKM();
@@ -171,7 +171,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     // =================================================================
 
     private JComponent buildHeader() {
-        return TabStyler.createHeader("QUẢN LÝ KHUYẾN MÃI");
+        return createHeader("QUẢN LÝ KHUYẾN MÃI");
     }
 
     private JComponent buildBody() {

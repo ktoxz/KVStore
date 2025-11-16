@@ -18,7 +18,7 @@ import com.dao.DAO_NhanVien;
 import com.entity.NhanVien;
 import com.toedter.calendar.JDateChooser;
 
-public class TAB_NhanVien extends JPanel implements ActionListener, MouseListener {
+public class TAB_NhanVien extends JPanel implements ActionListener, MouseListener, TabStyleSupport {
 
     private static final long serialVersionUID = 1L;
 
@@ -62,7 +62,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
         JPanel northWrapper = new JPanel(new BorderLayout());
         northWrapper.setOpaque(false);
-        northWrapper.add(TabStyler.createHeader("QUẢN LÝ NHÂN VIÊN"), BorderLayout.NORTH);
+        northWrapper.add(createHeader("QUẢN LÝ NHÂN VIÊN"), BorderLayout.NORTH);
         northWrapper.add(buildNorthSearch(), BorderLayout.CENTER);
         add(northWrapper, BorderLayout.NORTH);
 
@@ -85,7 +85,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         currentKeywordNV = ""; // hoặc lấy từ ô tìm kiếm ban đầu
         loadPageNV(1);
 
-        TabStyler.applyContentFont(this);
+        applyContentFont(this);
 
     }
 
@@ -261,7 +261,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         LineBorder lineBorder = new LineBorder(new Color(200, 200, 200), line, true);
         TitledBorder titled = new TitledBorder(lineBorder, title, TitledBorder.LEFT, TitledBorder.TOP);
         titled.setTitleColor(color);
-        titled.setTitleFont(TabStyler.SECTION_FONT.deriveFont(fontSize));
+        titled.setTitleFont(SECTION_FONT.deriveFont(fontSize));
 
         return new CompoundBorder(
                 new EmptyBorder(8, 8, 8, 8),            // mép ngoài

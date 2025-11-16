@@ -10,14 +10,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import com.dao.DAO_KhachHang;
 import com.entity.KhachHang;
 import com.toedter.calendar.JDateChooser;
 
-public class TAB_KhachHang extends JPanel implements ActionListener, MouseListener {
+public class TAB_KhachHang extends JPanel implements ActionListener, MouseListener, TabStyleSupport {
     private JTextField txtMaKH, txtTenKH, txtSDT, txtDiemTichLuy, txtTim;
     private JRadioButton radNam, radNu;
     private JDateChooser dateChooser;
@@ -34,25 +35,31 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 
     private DAO_KhachHang kh_dao = new DAO_KhachHang();
 
+    private static final Color CLR_PRIMARY = new Color(33, 150, 243);
+    private static final Color CLR_WARNING = new Color(255, 193, 7);
+    private static final Color CLR_SUCCESS = new Color(76, 175, 80);
+    private static final Color CLR_MUTED = new Color(158, 158, 158);
+    private static final Color CLR_TEXT_LIGHT = Color.WHITE;
+
     public TAB_KhachHang() {
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        add(TabStyler.createHeader("QUẢN LÝ KHÁCH HÀNG"), BorderLayout.NORTH);
+        JPanel northWrapper = new JPanel(new BorderLayout(0, 10));
+        northWrapper.setOpaque(false);
+        northWrapper.add(createHeader("QUẢN LÝ KHÁCH HÀNG"), BorderLayout.NORTH);
+        northWrapper.add(buildNorthSearch(), BorderLayout.CENTER);
+        add(northWrapper, BorderLayout.NORTH);
 
-        // ===== CENTER =====
-        JPanel pCenter = new JPanel(new BorderLayout());
-
-        // ===== LEFT: FORM =====
-        JPanel pLeft = createLeftForm();
-        pCenter.add(pLeft, BorderLayout.WEST);
-
-        // ===== RIGHT: TABLE + SEARCH + PAGINATION =====
-        JPanel pRight = createRightTable();
-        pCenter.add(pRight, BorderLayout.CENTER);
-
-        add(pCenter, BorderLayout.CENTER);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createLeftForm(), createRightTable());
+        split.setResizeWeight(0.36);
+        split.setContinuousLayout(true);
+        split.setDividerLocation(420);
+        split.setOpaque(false);
+        split.setBorder(null);
+        split.setEnabled(false);
+        add(split, BorderLayout.CENTER);
 
         // ===== LOAD DATA =====
         DocDuLieuVaoDatabase();
@@ -64,155 +71,100 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         btnTim.addActionListener(this);
         tableKH.addMouseListener(this);
 
-        TabStyler.applyContentFont(this);
+        applyContentFont(this);
     }
 
     private JPanel createLeftForm() {
-        JPanel pLeft = new JPanel();
-        TitledBorder border = TabStyler.createSectionBorder("Thông tin khách hàng");
-        pLeft.setBorder(border);
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setBorder(new CompoundBorder(
+                createSectionBorder("Thông tin khách hàng"),
+                new EmptyBorder(10, 12, 12, 12)));
 
-        Box box = Box.createVerticalBox();
-        int labelWidth = 120;
-        Dimension sizeTxt = new Dimension(180, 25);
-        Dimension sizeBtn = new Dimension(130, 30);
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.weightx = 1.0;
 
-        // Mã KH
-        Box b1 = Box.createHorizontalBox();
-        JLabel lblMa = new JLabel("Mã khách hàng:");
-        lblMa.setPreferredSize(new Dimension(labelWidth, 25));
+        int row = 0;
         txtMaKH = new JTextField();
-        txtMaKH.setPreferredSize(sizeTxt);
         txtMaKH.setEditable(false);
-        b1.add(lblMa); b1.add(txtMaKH);
+        addFormRow(form, gbc, row++, "Mã khách hàng:", txtMaKH);
 
-        // Tên KH
-        Box b2 = Box.createHorizontalBox();
-        JLabel lblTen = new JLabel("Họ tên:");
-        lblTen.setPreferredSize(new Dimension(labelWidth, 25));
         txtTenKH = new JTextField();
-        txtTenKH.setPreferredSize(sizeTxt);
-        b2.add(lblTen); b2.add(txtTenKH);
+        addFormRow(form, gbc, row++, "Họ tên:", txtTenKH);
 
-        // Giới tính
-        Box b3 = Box.createHorizontalBox();
-        JLabel lblGT = new JLabel("Giới tính:");
-        lblGT.setPreferredSize(new Dimension(labelWidth, 25));
         radNam = new JRadioButton("Nam", true);
         radNu = new JRadioButton("Nữ");
         ButtonGroup groupGT = new ButtonGroup();
-        groupGT.add(radNam); groupGT.add(radNu);
+        groupGT.add(radNam);
+        groupGT.add(radNu);
         JPanel genderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        genderPanel.setPreferredSize(new Dimension(180, 25));
-        genderPanel.add(radNam); genderPanel.add(radNu);
-        b3.add(lblGT); b3.add(genderPanel);
+        genderPanel.setOpaque(false);
+        genderPanel.add(radNam);
+        genderPanel.add(radNu);
+        addFormRow(form, gbc, row++, "Giới tính:", genderPanel);
 
-        // SĐT
-        Box b4 = Box.createHorizontalBox();
-        JLabel lblSDT = new JLabel("SĐT:");
-        lblSDT.setPreferredSize(new Dimension(labelWidth, 25));
         txtSDT = new JTextField();
-        txtSDT.setPreferredSize(sizeTxt);
-        b4.add(lblSDT); b4.add(txtSDT);
+        addFormRow(form, gbc, row++, "SĐT:", txtSDT);
 
-        // Ngày tạo
-        Box b5 = Box.createHorizontalBox();
-        JLabel lblNgay = new JLabel("Ngày tạo:");
-        lblNgay.setPreferredSize(new Dimension(labelWidth, 25));
         dateChooser = new JDateChooser();
         dateChooser.setDateFormatString("dd/MM/yyyy");
         dateChooser.setDate(new Date());
-        dateChooser.setPreferredSize(sizeTxt);
-        b5.add(lblNgay); b5.add(dateChooser);
+        addFormRow(form, gbc, row++, "Ngày tạo:", dateChooser);
 
-        // Điểm tích lũy
-        Box b6 = Box.createHorizontalBox();
-        JLabel lblDiem = new JLabel("Điểm tích lũy:");
-        lblDiem.setPreferredSize(new Dimension(labelWidth, 25));
-        txtDiemTichLuy = new JTextField();
-        txtDiemTichLuy.setPreferredSize(sizeTxt);
+        txtDiemTichLuy = new JTextField("0");
         txtDiemTichLuy.setEditable(false);
-        b6.add(lblDiem); b6.add(txtDiemTichLuy);
+        addFormRow(form, gbc, row++, "Điểm tích lũy:", txtDiemTichLuy);
 
-        // Buttons
-        Color textColor = Color.WHITE;
+        wrapper.add(form, BorderLayout.NORTH);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
+        actions.setOpaque(false);
         btnThem = new JButton("Thêm");
-        btnThem.setBackground(Color.BLUE);
-        btnThem.setForeground(textColor);
-        btnThem.setPreferredSize(sizeBtn);
-
         btnSua = new JButton("Sửa");
-        btnSua.setBackground(Color.ORANGE);
-        btnSua.setForeground(textColor);
-        btnSua.setPreferredSize(sizeBtn);
-
         btnLamMoi = new JButton("Làm mới");
-        btnLamMoi.setBackground(Color.GREEN);
-        btnLamMoi.setForeground(textColor);
-        btnLamMoi.setPreferredSize(sizeBtn);
+        styleButton(btnThem, CLR_PRIMARY, CLR_TEXT_LIGHT);
+        styleButton(btnSua, CLR_WARNING, Color.BLACK);
+        styleButton(btnLamMoi, CLR_SUCCESS, CLR_TEXT_LIGHT);
+        actions.add(btnThem);
+        actions.add(btnSua);
+        actions.add(btnLamMoi);
+        wrapper.add(actions, BorderLayout.SOUTH);
 
-        Box bBtns = Box.createHorizontalBox();
-        bBtns.add(btnThem);
-        bBtns.add(Box.createHorizontalStrut(10));
-        bBtns.add(btnSua);
-        bBtns.add(Box.createHorizontalStrut(10));
-        bBtns.add(btnLamMoi);
-
-        // Ảnh
-        ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
-        Image scaled = icon.getImage().getScaledInstance(400, 420, Image.SCALE_SMOOTH);
-        JLabel imgLabel = new JLabel(new ImageIcon(scaled));
-        imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        imgLabel.setBorder(new EmptyBorder(40, 0, 40, 0));
-        Box bIcon = Box.createHorizontalBox();
-        bIcon.add(imgLabel);
-
-        // Add to box
-        box.add(b1); box.add(Box.createVerticalStrut(8));
-        box.add(b2); box.add(Box.createVerticalStrut(8));
-        box.add(b3); box.add(Box.createVerticalStrut(8));
-        box.add(b4); box.add(Box.createVerticalStrut(8));
-        box.add(b5); box.add(Box.createVerticalStrut(8));
-        box.add(b6); box.add(Box.createVerticalStrut(12));
-        box.add(bBtns); box.add(Box.createVerticalStrut(8));
-        box.add(bIcon);
-
-        pLeft.add(box, BorderLayout.NORTH);
-        return pLeft;
+        return wrapper;
     }
 
     private JPanel createRightTable() {
-        JPanel pRight = new JPanel(new BorderLayout());
-        TitledBorder border = TabStyler.createSectionBorder("Danh sách khách hàng");
-        pRight.setBorder(border);
+        JPanel card = new JPanel(new BorderLayout(10, 10));
+        card.setOpaque(false);
+        card.setBorder(new CompoundBorder(
+                createSectionBorder("Danh sách khách hàng"),
+                new EmptyBorder(10, 12, 12, 12)));
 
-        // Tìm kiếm
-        JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        JLabel lblTim = new JLabel("Tìm khách bằng số điện thoại:");
-        lblTim.setPreferredSize(new Dimension(180, 25));
-        txtTim = new JTextField(20);
-        btnTim = new JButton("Tìm");
-        pSearch.add(lblTim);
-        pSearch.add(txtTim);
-        pSearch.add(btnTim);
-
-        // Bảng
         String[] header = {"Mã KH", "Tên KH", "Giới tính", "SĐT", "Ngày tạo", "Điểm tích lũy"};
         modelKH = new DefaultTableModel(header, 0);
         tableKH = new JTable(modelKH);
         tableKH.setRowHeight(40);
         JScrollPane pane = new JScrollPane(tableKH);
+        pane.setBorder(new LineBorder(new Color(230, 230, 230)));
+        card.add(pane, BorderLayout.CENTER);
 
-        // Phân trang
-        JPanel pPagination = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel pPagination = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        pPagination.setOpaque(false);
         btnPrev = new JButton("< Trang trước");
         btnNext = new JButton("Trang sau >");
         lblPageInfo = new JLabel("Trang 1 / 1");
+        styleButton(btnPrev, CLR_MUTED, CLR_TEXT_LIGHT);
+        styleButton(btnNext, CLR_PRIMARY, CLR_TEXT_LIGHT);
         pPagination.add(btnPrev);
         pPagination.add(lblPageInfo);
         pPagination.add(btnNext);
+        card.add(pPagination, BorderLayout.SOUTH);
 
-        // Thêm sự kiện phân trang
         btnPrev.addActionListener(e -> {
             if (currentPage > 1) {
                 currentPage--;
@@ -228,10 +180,20 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
             }
         });
 
-        pRight.add(pSearch, BorderLayout.NORTH);
-        pRight.add(pane, BorderLayout.CENTER);
-        pRight.add(pPagination, BorderLayout.SOUTH);
-        return pRight;
+        return card;
+    }
+
+    private JComponent buildNorthSearch() {
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setOpaque(false);
+        JLabel lblTim = new JLabel("Tìm khách bằng số điện thoại:");
+        txtTim = new JTextField();
+        btnTim = new JButton("Tìm");
+        styleButton(btnTim, CLR_PRIMARY, CLR_TEXT_LIGHT);
+        panel.add(lblTim, BorderLayout.WEST);
+        panel.add(txtTim, BorderLayout.CENTER);
+        panel.add(btnTim, BorderLayout.EAST);
+        return panel;
     }
 
     private void loadDataToTable() {
@@ -437,6 +399,29 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
             txtSDT.setText(kh.getSdt());
             txtDiemTichLuy.setText(String.valueOf(kh.getDiemTichLuy()));
             dateChooser.setDate(java.sql.Date.valueOf(kh.getNgayTao()));
+        }
+    }
+
+    private void addFormRow(JPanel form, GridBagConstraints gbc, int row, String label, JComponent field) {
+        gbc.gridy = row;
+
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        form.add(new JLabel(label), gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        form.add(field, gbc);
+    }
+
+    private void styleButton(AbstractButton button, Color bg, Color fg) {
+        button.setBackground(bg);
+        button.setForeground(fg);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        if (button instanceof JButton btn) {
+            btn.setPreferredSize(new Dimension(130, 32));
         }
     }
 
