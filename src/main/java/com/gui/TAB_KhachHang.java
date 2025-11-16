@@ -312,6 +312,12 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
             txtTenKH.requestFocus();
             return null;
         }
+        
+        if (isNew && dao.isTrungSoDienThoai(sdt)) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại đã tồn tại!");
+            txtSDT.requestFocus();
+            return null;
+        }
 
         if (!sdt.matches("0\\d{9}")) {
             JOptionPane.showMessageDialog(this, "SĐT 10 số, bắt đầu bằng 0");
