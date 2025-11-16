@@ -333,7 +333,10 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 		// === Ô nhập khoảng giá ===
 		txtGiaMin = new JTextField(6);
+		setupGiaAutoFormat(txtGiaMin);
+
 		txtGiaMax = new JTextField(6);
+		setupGiaAutoFormat(txtGiaMax);
 
 		// === Nút xóa bộ lọc ===
 		btnResetBoLoc = new JButton("Xóa bộ lọc");
@@ -479,6 +482,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 		// --- Giá
 		txtGia = new JTextField();
+		setupGiaAutoFormat(txtGia);
 		addRowFixed(p, gbc, "Giá (₫):", txtGia);
 
 		// --- Loại
@@ -657,15 +661,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		return nf.format(v);
 	}
 
-	private double parseGia(String s) {
-		if (s == null || s.trim().isEmpty())
-			return 0.0;
-		String norm = s.replace(".", "").replace(",", "").trim();
-		try {
-			return Double.parseDouble(norm);
-		} catch (Exception ex) {
-			return -1;
-		}
+	private double parseGia(String text) {
+	    if (text == null) return -1;
+	    // bỏ hết ký tự không phải số, kể cả dấu phẩy / khoảng trắng
+	    String s = text.replaceAll("[^0-9]", "");
+	    if (s.isEmpty()) return -1;
+
+	    try {
+	        return Double.parseDouble(s);
+	    } catch (NumberFormatException ex) {
+	        return -1;
+	    }
 	}
 
 
@@ -1132,6 +1138,39 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
         cols.add(sb.toString());
         return cols;
     }
+    
+    private void setupGiaAutoFormat(JTextField txt) {
+        txt.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                String raw = txt.getText();
+                // bỏ hết ký tự không phải số
+                String digits = raw.replaceAll("[^0-9]", "");
+                if (digits.isEmpty()) {
+                    txt.setText("");
+                    return;
+                }
+
+                java.text.DecimalFormatSymbols symbols = new java.text.DecimalFormatSymbols();
+                symbols.setGroupingSeparator(',');
+                java.text.DecimalFormat df = new java.text.DecimalFormat("#,###", symbols);
+                df.setGroupingUsed(true);
+                df.setMaximumFractionDigits(0);
+
+                try {
+                    long value = Long.parseLong(digits);
+                    String formatted = df.format(value);
+                    if (!formatted.equals(raw)) {
+                        txt.setText(formatted);
+                    }
+                } catch (NumberFormatException ex) {
+                    // ignore
+                }
+            }
+        });
+    }
+
+
 
 	
     // ====== Xuất CSV theo bộ lọc hiện tại ======
