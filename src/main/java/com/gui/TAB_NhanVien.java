@@ -60,7 +60,11 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        add(buildNorthSearch(), BorderLayout.NORTH);
+        JPanel northWrapper = new JPanel(new BorderLayout());
+        northWrapper.setOpaque(false);
+        northWrapper.add(TabStyler.createHeader("QUẢN LÝ NHÂN VIÊN"), BorderLayout.NORTH);
+        northWrapper.add(buildNorthSearch(), BorderLayout.CENTER);
+        add(northWrapper, BorderLayout.NORTH);
 
         JComponent leftForm = buildWestForm();
         JComponent rightTable = buildCenterTable();
@@ -76,18 +80,18 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         split.setEnabled(false);       // KHÓA không cho kéo nữa
         add(split, BorderLayout.CENTER);
 
-        // tiêu đề lớn giống TAB_KhachHang
-        setBorder(createTitleBorder("QUẢN LÝ NHÂN VIÊN", new Color(0, 102, 204), 22f, 0));
-
         bindEvents();
-        
+
         currentKeywordNV = ""; // hoặc lấy từ ô tìm kiếm ban đầu
         loadPageNV(1);
+
+        TabStyler.applyContentFont(this);
 
     }
 
     private JComponent buildNorthSearch() {
         JPanel p = new JPanel(new BorderLayout(8, 0));
+        p.setOpaque(false);
         JLabel lb = new JLabel("Tìm nhân viên :");
         txtSearch = new JTextField();
         btnTim = new JButton("Tìm");
@@ -257,7 +261,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         LineBorder lineBorder = new LineBorder(new Color(200, 200, 200), line, true);
         TitledBorder titled = new TitledBorder(lineBorder, title, TitledBorder.LEFT, TitledBorder.TOP);
         titled.setTitleColor(color);
-        titled.setTitleFont(new Font("SansSerif", Font.BOLD, (int) fontSize));
+        titled.setTitleFont(TabStyler.SECTION_FONT.deriveFont(fontSize));
 
         return new CompoundBorder(
                 new EmptyBorder(8, 8, 8, 8),            // mép ngoài

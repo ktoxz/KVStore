@@ -59,7 +59,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     private final DAO_SanPham daoSP = new DAO_SanPham();
 
     // ==== Chuẩn hóa Màu sắc & Style ====
-    private static final Color CLR_HEADER = new Color(0, 90, 200);
     private static final Color CLR_SUCCESS = new Color(27, 160, 79);
     private static final Color CLR_PRIMARY = new Color(0, 120, 215);
     private static final Color CLR_DANGER = new Color(200, 50, 50);
@@ -76,7 +75,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     // private static final Color CLR_PAGE_BUTTON_INACTIVE_FG = new Color(50, 50, 50);
 
     // Font và Kích thước đã tối ưu
-    private static final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 30);
     private static final Font FONT_BUTTON = new Font("Segoe UI", Font.BOLD, 14);
     private static final Font FONT_PAGE_BUTTON = new Font("Segoe UI", Font.PLAIN, 14); // Font cho nút phân trang
     private static final Dimension DIM_BUTTON = new Dimension(110, 38);
@@ -158,6 +156,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         add(buildHeader(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
 
+        TabStyler.applyContentFont(this);
+
         bindEvents();
         loadLoaiKM();
         loadTableKM(); 
@@ -171,13 +171,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     // =================================================================
 
     private JComponent buildHeader() {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        p.setOpaque(false); 
-        JLabel title = new JLabel("QUẢN LÝ KHUYẾN MÃI");
-        title.setFont(FONT_HEADER);
-        title.setForeground(CLR_HEADER); 
-        p.add(title);
-        return p;
+        return TabStyler.createHeader("QUẢN LÝ KHUYẾN MÃI");
     }
 
     private JComponent buildBody() {

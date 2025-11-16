@@ -45,13 +45,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         setLayout(new BorderLayout(10,10));
         setBackground(Color.WHITE);
 
-        JLabel lblTitle = new JLabel("Thống kê doanh thu");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitle.setForeground(new Color(0,90,200));
-        JPanel pHeader = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pHeader.setBackground(Color.WHITE);
-        pHeader.add(lblTitle);
-        add(pHeader, BorderLayout.NORTH);
+        add(TabStyler.createHeader("THỐNG KÊ DOANH THU"), BorderLayout.NORTH);
 
         JTabbedPane tabCon = new JTabbedPane();
         tabCon.setFont(new Font("Segoe UI", Font.PLAIN, 16));
@@ -61,6 +55,8 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         tabCon.addTab("Thống kê khuyến mãi hiện tại", createTabKhuyenMai(uiKhuyenMai));
 
         add(tabCon, BorderLayout.CENTER);
+
+        TabStyler.applyContentFont(this);
     }
 
     private String formatDate(Date date) {
@@ -97,7 +93,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         };
         ui.table = new JTable(ui.tableModel);
         JScrollPane scrollSP = new JScrollPane(ui.table);
-        scrollSP.setBorder(BorderFactory.createTitledBorder("Doanh thu theo sản phẩm"));
+        scrollSP.setBorder(TabStyler.createSectionBorder("Doanh thu theo sản phẩm"));
 
         ui.dataset = new DefaultCategoryDataset();
         JFreeChart chart = ChartFactory.createBarChart("Top sản phẩm bán chạy","Sản phẩm","Số lượng", ui.dataset);
@@ -173,14 +169,12 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         };
         ui.table = new JTable(ui.tableModel);
         JScrollPane scroll = new JScrollPane(ui.table);
-        scroll.setBorder(BorderFactory.createTitledBorder(
+        TitledBorder invoicesBorder = BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(0,90,200)),
-            "Thống kê hóa đơn theo nhân viên",
-            TitledBorder.DEFAULT_JUSTIFICATION,
-            TitledBorder.DEFAULT_POSITION,
-            new Font("Arial", Font.BOLD, 14),
-            new Color(0,90,200)
-        ));
+            "Thống kê hóa đơn theo nhân viên"
+        );
+        TabStyler.applySectionTitleFont(invoicesBorder);
+        scroll.setBorder(invoicesBorder);
 
         pCenter.add(scroll, BorderLayout.CENTER);
 
@@ -253,14 +247,12 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         ui.table = new JTable(ui.tableModel);
 
         JScrollPane scroll = new JScrollPane(ui.table);
-        scroll.setBorder(BorderFactory.createTitledBorder(
+        TitledBorder promoBorder = BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(0, 90, 200)),
-            "Khuyến mãi hiện hành",
-            TitledBorder.DEFAULT_JUSTIFICATION,
-            TitledBorder.DEFAULT_POSITION,
-            new Font("Arial", Font.BOLD, 14),
-            new Color(0, 90, 200)
-        ));
+            "Khuyến mãi hiện hành"
+        );
+        TabStyler.applySectionTitleFont(promoBorder);
+        scroll.setBorder(promoBorder);
         pCenter.add(scroll, BorderLayout.CENTER);
 
         // PHÂN TRANG
@@ -615,10 +607,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         gbc.gridx=0; gbc.gridy=6; gbc.gridwidth=2; pWest.add(ui.btnXuat, gbc);
         ui.btnXuat.addActionListener(this);
 
-        TitledBorder border_left = BorderFactory.createTitledBorder("Thống kê tổng quan");
-        border_left.setTitleColor(new Color(0,90,200));
-        border_left.setTitleFont(new Font("Arial", Font.BOLD, 18));
-        pWest.setBorder(border_left);
+        pWest.setBorder(TabStyler.createSectionBorder("Thống kê tổng quan"));
 
         return pWest;
     }

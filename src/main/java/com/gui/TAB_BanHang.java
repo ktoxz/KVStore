@@ -88,14 +88,7 @@ public class TAB_BanHang extends JPanel {
         setBackground(Color.WHITE);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // ===== HEADER =====
-        JLabel lblTitle = new JLabel("BÁN HÀNG");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitle.setForeground(new Color(0, 90, 200));
-        JPanel pHeader = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pHeader.setBackground(Color.WHITE);
-        pHeader.add(lblTitle);
-        add(pHeader, BorderLayout.NORTH);
+        add(TabStyler.createHeader("BÁN HÀNG"), BorderLayout.NORTH);
 
         // ===== SPLIT CHÍNH =====
         JSplitPane splitMain = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -921,6 +914,7 @@ public class TAB_BanHang extends JPanel {
         splitMain.setLeftComponent(pnlLeft);
         splitMain.setRightComponent(pnlRight);
         add(splitMain, BorderLayout.CENTER);
+        TabStyler.applyContentFont(splitMain);
         
         // Khởi tạo mặc định
         txtName.setText("Khách vãng lai");

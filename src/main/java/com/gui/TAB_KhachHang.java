@@ -39,14 +39,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         setBackground(Color.WHITE);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // ===== HEADER =====
-        JLabel lblTitle = new JLabel("QUẢN LÝ KHÁCH HÀNG");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitle.setForeground(new Color(0, 90, 200));
-        JPanel pHeader = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pHeader.setBackground(Color.WHITE);
-        pHeader.add(lblTitle);
-        add(pHeader, BorderLayout.NORTH);
+        add(TabStyler.createHeader("QUẢN LÝ KHÁCH HÀNG"), BorderLayout.NORTH);
 
         // ===== CENTER =====
         JPanel pCenter = new JPanel(new BorderLayout());
@@ -70,14 +63,13 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         btnLamMoi.addActionListener(this);
         btnTim.addActionListener(this);
         tableKH.addMouseListener(this);
+
+        TabStyler.applyContentFont(this);
     }
 
     private JPanel createLeftForm() {
         JPanel pLeft = new JPanel();
-        Font font = new Font("Arial", Font.BOLD, 18);
-        TitledBorder border = BorderFactory.createTitledBorder("Thông tin khách hàng");
-        border.setTitleColor(Color.BLUE);
-        border.setTitleFont(font);
+        TitledBorder border = TabStyler.createSectionBorder("Thông tin khách hàng");
         pLeft.setBorder(border);
 
         Box box = Box.createVerticalBox();
@@ -191,10 +183,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
 
     private JPanel createRightTable() {
         JPanel pRight = new JPanel(new BorderLayout());
-        Font font = new Font("Arial", Font.BOLD, 18);
-        TitledBorder border = BorderFactory.createTitledBorder("Danh sách khách hàng");
-        border.setTitleColor(Color.BLUE);
-        border.setTitleFont(font);
+        TitledBorder border = TabStyler.createSectionBorder("Danh sách khách hàng");
         pRight.setBorder(border);
 
         // Tìm kiếm

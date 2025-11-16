@@ -75,9 +75,14 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		
 		dao = new DAO_SanPham();
 		
-		setLayout(new BorderLayout(10, 10));
-		setBorder(new EmptyBorder(10, 10, 10, 10));
-		add(buildNorthSearch(), BorderLayout.NORTH);
+                setLayout(new BorderLayout(10, 10));
+                setBorder(new EmptyBorder(10, 10, 10, 10));
+
+                JPanel northWrapper = new JPanel(new BorderLayout());
+                northWrapper.setOpaque(false);
+                northWrapper.add(TabStyler.createHeader("QUẢN LÝ SẢN PHẨM"), BorderLayout.NORTH);
+                northWrapper.add(buildNorthSearch(), BorderLayout.CENTER);
+                add(northWrapper, BorderLayout.NORTH);
 		
 		JComponent cenTab = buildCenterTable();
 		JComponent eastForm = buildEastForm();
@@ -104,9 +109,9 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		bindEvents();
 		setFormModeNew();
 		
-		setBorder( createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 0) );
+                TabStyler.applyContentFont(this);
 
-	}
+        }
 	
 	private void LoadCboLoaiSP() {
 	    DefaultComboBoxModel<LoaiSP> m = new DefaultComboBoxModel<>();
@@ -198,18 +203,17 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	
 	// build các tiểu cấu trúc
 	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
-	private static Border createTitleBorder(String title, Color titleColor, float fontSizePt, int lineThickness) {
-	    Font base = UIManager.getFont("Label.font");
-	    if (base == null) base = new Font("SansSerif", Font.PLAIN, 14);
+        private static Border createTitleBorder(String title, Color titleColor, float fontSizePt, int lineThickness) {
+            Font base = TabStyler.SECTION_FONT;
 
-	    return new CompoundBorder(
+            return new CompoundBorder(
 	        new EmptyBorder(8, 8, 8, 8), // mép ngoài
 	        new CompoundBorder(
 	            new TitledBorder(
 	                new LineBorder(new Color(200, 200, 200), lineThickness, true), // độ dày viền
 	                title,
 	                TitledBorder.LEFT, TitledBorder.TOP,
-	                base.deriveFont(Font.BOLD, fontSizePt), // cỡ chữ
+                        base.deriveFont(Font.BOLD, fontSizePt), // cỡ chữ
 	                titleColor                               // màu chữ
 	            ),
 	            new EmptyBorder(10, 12, 12, 12) // padding nội dung
@@ -221,7 +225,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	private JComponent buildNorthSearch() {
 		
 //		Panel dòng 1: tìm kiếm
-		JPanel p = new JPanel(new BorderLayout(8, 0));
+                JPanel p = new JPanel(new BorderLayout(8, 0));
+                p.setOpaque(false);
 		txtSearch = new JTextField();
 		btnTim = new JButton("Tìm");
 		
