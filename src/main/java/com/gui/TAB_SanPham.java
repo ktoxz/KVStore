@@ -144,14 +144,75 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	}
 	
 	//tải trang hiên tại (phân trang bằng SQL, không dùng dsAll)
+	// tải trang hiên tại (phân trang bằng SQL, không dùng dsAll)
 	private void reloadTable() {
-	    totalRows = dao.countSanPham(currentKeyword);
+	    // Đọc giá trị bộ lọc
+	    String loaiFilter = null;
+	    Boolean trangThaiFilter = null;
+	    Double giaMin = null;
+	    Double giaMax = null;
+
+	    // Lọc theo loại
+	    if (cboLocLoai != null) {
+	        LoaiSP loaiEnumLoc = (LoaiSP) cboLocLoai.getSelectedItem();
+	        if (loaiEnumLoc != null) {
+	            loaiFilter = loaiEnumLoc.toDbValue();
+	        }
+	    }
+
+	    // Lọc theo trạng thái
+	    if (cboLocTrangThai != null) {
+	        Object v = cboLocTrangThai.getSelectedItem();
+	        if (v instanceof String) {
+	            String s = (String) v;
+	            if ("Còn bán".equals(s)) {
+	                trangThaiFilter = Boolean.TRUE;
+	            } else if ("Ngừng bán".equals(s)) {
+	                trangThaiFilter = Boolean.FALSE;
+	            }
+	            // "Tất cả" => null (không lọc)
+	        }
+	    }
+
+	    // Lọc theo giá tối thiểu
+	    if (txtGiaMin != null) {
+	        String s = txtGiaMin.getText().trim();
+	        if (!s.isEmpty()) {
+	            double v = parseGia(s);
+	            if (v < 0) {
+	                JOptionPane.showMessageDialog(this, "Giá tối thiểu không hợp lệ!");
+	                txtGiaMin.requestFocus();
+	                return;
+	            }
+	            giaMin = v;
+	        }
+	    }
+
+	    // Lọc theo giá tối đa
+	    if (txtGiaMax != null) {
+	        String s = txtGiaMax.getText().trim();
+	        if (!s.isEmpty()) {
+	            double v = parseGia(s);
+	            if (v < 0) {
+	                JOptionPane.showMessageDialog(this, "Giá tối đa không hợp lệ!");
+	                txtGiaMax.requestFocus();
+	                return;
+	            }
+	            giaMax = v;
+	        }
+	    }
+
+	    // Gọi DAO với đủ tham số
+	    totalRows = dao.countSanPham(currentKeyword, loaiFilter, trangThaiFilter, giaMin, giaMax);
 
 	    totalPages = Math.max(1, (int) Math.ceil(totalRows / (double) pageSize));
 	    if (currentPage < 1) currentPage = 1;
 	    if (currentPage > totalPages) currentPage = totalPages;
 
-	    List<SanPham> dsPage = dao.getSanPhamPage(currentKeyword, currentPage, pageSize);
+	    List<SanPham> dsPage = dao.getSanPhamPage(
+	            currentKeyword, loaiFilter, trangThaiFilter, giaMin, giaMax,
+	            currentPage, pageSize
+	    );
 	    loadTable(dsPage);
 	    rebuildPaging(totalRows);
 	}
@@ -578,15 +639,33 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 
 
 	private void bindEvents() {
-		btnThem.addActionListener(this);
-		btnLuu.addActionListener(this);
-		btnXoaTrang.addActionListener(this);
-		btnXoa.addActionListener(this);
-		btnTim.addActionListener(this);
-		txtSearch.addActionListener(this);
-		btnChonAnh.addActionListener(this);
-		btnXoaAnh.addActionListener(this);
+	    btnThem.addActionListener(this);
+	    btnLuu.addActionListener(this);
+	    btnXoaTrang.addActionListener(this);
+	    btnXoa.addActionListener(this);
+	    btnTim.addActionListener(this);
+	    txtSearch.addActionListener(this);
+	    btnChonAnh.addActionListener(this);
+	    btnXoaAnh.addActionListener(this);
+
+	    // === Bộ lọc dưới thanh tìm kiếm ===
+	    if (btnResetBoLoc != null) {
+	        btnResetBoLoc.addActionListener(this);
+	    }
+	    if (cboLocLoai != null) {
+	        cboLocLoai.addActionListener(this);
+	    }
+	    if (cboLocTrangThai != null) {
+	        cboLocTrangThai.addActionListener(this);
+	    }
+	    if (txtGiaMin != null) {
+	        txtGiaMin.addActionListener(this);   // Enter trong ô giá min
+	    }
+	    if (txtGiaMax != null) {
+	        txtGiaMax.addActionListener(this);   // Enter trong ô giá max
+	    }
 	}
+
 
 	private void setFormModeNew() {
 		txtMa.setText("");
@@ -791,6 +870,35 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 			JOptionPane.showMessageDialog(this, "Đã xoá thành công!");
 			return;
 		}
+		
+		if (o.equals(btnResetBoLoc)) {
+		    // Reset toàn bộ bộ lọc
+		    if (cboLocLoai != null) {
+		        cboLocLoai.setSelectedIndex(0); // null = "Tất cả loại"
+		    }
+		    if (cboLocTrangThai != null) {
+		        cboLocTrangThai.setSelectedIndex(0); // "Tất cả"
+		    }
+		    if (txtGiaMin != null) {
+		        txtGiaMin.setText("");
+		    }
+		    if (txtGiaMax != null) {
+		        txtGiaMax.setText("");
+		    }
+
+		    currentPage = 1;
+		    reloadTable();
+		    return;
+		}
+
+		// Khi thay đổi lựa chọn lọc / Enter trong ô giá => áp dụng bộ lọc luôn
+		if (o.equals(cboLocLoai) || o.equals(cboLocTrangThai)
+		        || o.equals(txtGiaMin) || o.equals(txtGiaMax)) {
+		    currentPage = 1;
+		    reloadTable();
+		    return;
+		}
+
 
 		if (o.equals(btnTim) || o.equals(txtSearch)) {
 			String kw = txtSearch.getText().trim();

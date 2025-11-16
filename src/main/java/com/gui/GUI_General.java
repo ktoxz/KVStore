@@ -264,7 +264,7 @@ public class GUI_General extends JPanel {
                 loginFrame.setContentPane(loginPanel);
                 loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 loginFrame.setSize(1080, 600);
-                loginFrame.pack();e
+                loginFrame.pack();
                 loginFrame.setLocationRelativeTo(null);
                 loginFrame.setResizable(false);
                 loginFrame.setVisible(true);

@@ -51,6 +51,7 @@ CREATE TABLE NhanVien (
                           sdt NVARCHAR(15) UNIQUE,
                           ngayTaoTaiKhoan DATE DEFAULT GETDATE(),
                           chucVu NVARCHAR(20),
+                          matKhauKichHoat nvarchar(100),
                           FOREIGN KEY (chucVu) REFERENCES ChucVu(chucVu)
 );
 
@@ -222,7 +223,8 @@ INSERT INTO NhanVien (maNV, tenNV, matKhau, gioiTinh, email, sdt, ngayTaoTaiKhoa
 (N'NV027', N'Đinh Hoàng Phát',      N'123456', 1, N'phat.dinh@store.vn',        N'0901000027', '2025-01-27', N'THUNGAN'),
 (N'NV028', N'Nguyễn Ngọc Trâm',     N'123456', 0, N'tram.nguyen@store.vn',      N'0901000028', '2025-01-28', N'THUNGAN'),
 (N'NV029', N'Phùng Anh Khoa',       N'123456', 1, N'khoa.phung@store.vn',       N'0901000029', '2025-01-29', N'THUNGAN'),
-(N'NV030', N'Trần Thảo Nhi',        N'123456', 0, N'nhi.tran@store.vn',         N'0901000030', '2025-01-30', N'THUNGAN');
+(N'NV030', N'Trần Thảo Nhi',        N'123456', 0, N'nhi.tran@store.vn',         N'0901000030', '2025-01-30', N'THUNGAN'),
+(N'NV031', N'Nguyễn Anh Kiệt',        N'123', 1, N'huylet334@gmail.com',         N'0933841587', '2025-01-30', N'QUANLY');
 
 GO
 
