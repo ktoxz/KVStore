@@ -12,7 +12,6 @@ public class GUI_General extends JPanel {
     private JPanel contentPanel;
     private JPanel currentTabPanel;
     private TAB_KhuyenMai tabKhuyenMai;
-    private TAB_HuongDan tabHuongDan;
     private TAB_KhachHang tabKhachHang;
     private TAB_BanHang tabBanHang;
     private TAB_NhanVien tabNhanVien;
@@ -35,7 +34,6 @@ public class GUI_General extends JPanel {
         setLayout(new BorderLayout());
 
         tabKhuyenMai = new TAB_KhuyenMai();
-        tabHuongDan = new TAB_HuongDan();
         tabKhachHang = new TAB_KhachHang();
         tabBanHang = new TAB_BanHang(nhanVien);
         tabNhanVien = new TAB_NhanVien();
@@ -144,13 +142,6 @@ public class GUI_General extends JPanel {
         JButton btnKhuyenMai = createTabButton("Khuyến mãi", "🎁");
         btnKhuyenMai.addActionListener(e -> showTab(tabKhuyenMai));
         sidebarPanel.add(btnKhuyenMai);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Hướng dẫn
-        JButton btnHuongDan = createTabButton("Hướng dẫn", "📖");
-        btnHuongDan.addActionListener(e -> showTab(tabHuongDan));
-        sidebarPanel.add(btnHuongDan);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 

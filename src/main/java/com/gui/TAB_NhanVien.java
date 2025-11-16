@@ -9,6 +9,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import com.enums.ChucVu;
+import com.enums.ThemeColor;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -24,14 +25,14 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
     DAO_NhanVien dao;
 
-    // Theme
-    static final Color
-            CLR_PRIMARY = new Color(33, 150, 243),
-            CLR_WARNING = new Color(255, 193, 7),
-            CLR_SUCCESS = new Color(76, 175, 80),
-            CLR_MUTED = new Color(158, 158, 158),
-            CLR_TEXT_LIGHT = Color.WHITE,
-            CLR_TEXT_DARK = Color.BLACK;
+    // Theme (reusing the shared palette)
+    private static final Color CLR_PRIMARY = ThemeColor.PRIMARY.color();
+    private static final Color CLR_PRIMARY_DARK = ThemeColor.PRIMARY_DARK.color();
+    private static final Color CLR_WARNING = ThemeColor.WARNING.color();
+    private static final Color CLR_SUCCESS = ThemeColor.SUCCESS.color();
+    private static final Color CLR_MUTED = ThemeColor.INFO.color();
+    private static final Color CLR_TEXT_LIGHT = ThemeColor.TEXT_LIGHT.color();
+    private static final Color CLR_TEXT_DARK = ThemeColor.TEXT_DARK.color();
 
     // UI
     JTextField txtSearch, txtMaNV, txtTenNV, txtEmail, txtSdt;
@@ -59,14 +60,15 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBackground(ThemeColor.LIGHT_BG.color());
 
         add(buildNorthSearch(), BorderLayout.NORTH);
 
         JComponent leftForm = buildWestForm();
         JComponent rightTable = buildCenterTable();
 
-        leftForm.setBorder(createTitleBorder("Thông tin nhân viên", new Color(30, 144, 255), 20f, 1));
-        rightTable.setBorder(createTitleBorder("Danh sách nhân viên", new Color(30, 144, 255), 20f, 1));
+        leftForm.setBorder(createTitleBorder("Thông tin nhân viên", CLR_PRIMARY, 20f, 1));
+        rightTable.setBorder(createTitleBorder("Danh sách nhân viên", CLR_PRIMARY, 20f, 1));
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftForm, rightTable);
         split.setResizeWeight(0.35);
@@ -77,7 +79,7 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         add(split, BorderLayout.CENTER);
 
         // tiêu đề lớn giống TAB_KhachHang
-        setBorder(createTitleBorder("QUẢN LÝ NHÂN VIÊN", new Color(0, 102, 204), 22f, 0));
+        setBorder(createTitleBorder("QUẢN LÝ NHÂN VIÊN", CLR_PRIMARY_DARK, 22f, 0));
 
         bindEvents();
         
@@ -88,6 +90,10 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
 
     private JComponent buildNorthSearch() {
         JPanel p = new JPanel(new BorderLayout(8, 0));
+        p.setBackground(ThemeColor.CARD_BG.color());
+        p.setBorder(new CompoundBorder(
+                new LineBorder(ThemeColor.PRIMARY.color(), 1, true),
+                new EmptyBorder(8, 12, 8, 12)));
         JLabel lb = new JLabel("Tìm nhân viên :");
         txtSearch = new JTextField();
         btnTim = new JButton("Tìm");

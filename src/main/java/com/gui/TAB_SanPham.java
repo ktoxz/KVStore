@@ -10,6 +10,7 @@ import javax.swing.table.TableColumnModel;
 import com.dao.DAO_SanPham;
 import com.entity.SanPham;
 import com.enums.LoaiSP;
+import com.enums.ThemeColor;
 
 
 import java.awt.*;
@@ -31,14 +32,14 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	
 	DAO_SanPham dao;
 
-	// Theme
-	static final Color
-			CLR_PRIMARY = new Color(33, 150, 243),
-			CLR_WARNING = new Color(255, 193, 7),
-			CLR_DANGER = new Color(244, 67, 54), 
-			CLR_MUTED = new Color(158, 158, 158), 
-			CLR_TEXT_LIGHT = Color.WHITE,
-			CLR_TEXT_DARK = Color.BLACK;
+        // Theme
+        static final Color
+                        CLR_PRIMARY = ThemeColor.PRIMARY.color(),
+                        CLR_WARNING = ThemeColor.WARNING.color(),
+                        CLR_DANGER = ThemeColor.ACCENT.color(),
+                        CLR_MUTED = ThemeColor.SECONDARY.color(),
+                        CLR_TEXT_LIGHT = ThemeColor.TEXT_LIGHT.color(),
+                        CLR_TEXT_DARK = ThemeColor.TEXT_DARK.color();
 
 	// UI
 	JTextField txtSearch, txtMa, txtTen, txtGia, txtPathAnh;
@@ -82,8 +83,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		JComponent cenTab = buildCenterTable();
 		JComponent eastForm = buildEastForm();
 		
-		cenTab.setBorder( createTitleBorder( "Danh sách sản phẩm", new Color(30,144,255), 20f, 1 ) );
-		eastForm.setBorder( createTitleBorder( "Thông tin sản phẩm", new Color(30,144,255), 20f, 1 ) );
+                cenTab.setBorder( createTitleBorder( "Danh sách sản phẩm", CLR_PRIMARY, 20f, 1 ) );
+                eastForm.setBorder( createTitleBorder( "Thông tin sản phẩm", CLR_PRIMARY, 20f, 1 ) );
 
 		JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, cenTab, eastForm);
 		split.setResizeWeight(0.70);
@@ -104,7 +105,7 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 		bindEvents();
 		setFormModeNew();
 		
-		setBorder( createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 0) );
+                setBorder( createTitleBorder("QUẢN LÝ SẢN PHẨM", ThemeColor.PRIMARY_DARK.color(), 22f, 0) );
 
 	}
 	
@@ -196,8 +197,8 @@ public class TAB_SanPham extends JPanel implements ActionListener, MouseListener
 	    return dao.getNextMaSanPham();
 	}
 	
-	// build các tiểu cấu trúc
-	// ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", new Color(0,102,204), 22f, 2));
+        // build các tiểu cấu trúc
+        // ví dụ gọi: setBorder(createTitleBorder("QUẢN LÝ SẢN PHẨM", ThemeColor.PRIMARY_DARK.color(), 22f, 2));
 	private static Border createTitleBorder(String title, Color titleColor, float fontSizePt, int lineThickness) {
 	    Font base = UIManager.getFont("Label.font");
 	    if (base == null) base = new Font("SansSerif", Font.PLAIN, 14);
