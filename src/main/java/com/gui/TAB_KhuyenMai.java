@@ -32,8 +32,10 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects; // (MỚI)
 import java.util.regex.Pattern;
 import javax.swing.border.Border;
 import com.toedter.calendar.JDateChooser;
@@ -47,6 +49,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Phiên bản cuối: Tối ưu Layout, chống chớp/giật, Font lớn
  * VÀ quay lại cách tô màu nút đơn giản (setBackground)
+ * MỚI: Thêm phân trang và làm đẹp UI phân trang (Sử dụng FlatLaf bo tròn)
  */
 public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListener {
 
@@ -65,17 +68,23 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     private static final Color CLR_MUTED = new Color(120, 120, 120);
     private static final Color CLR_BORDER = new Color(220, 220, 220);
     
+    // (MỚI) Màu cho phân trang
+    private static final Color CLR_PAGE_BUTTON_ACTIVE_BG = CLR_PRIMARY;
+    private static final Color CLR_PAGE_BUTTON_ACTIVE_FG = Color.WHITE;
+    // Không cần màu inactive nữa, để FlatLaf tự xử lý
+    // private static final Color CLR_PAGE_BUTTON_INACTIVE_BG = new Color(245, 245, 245);
+    // private static final Color CLR_PAGE_BUTTON_INACTIVE_FG = new Color(50, 50, 50);
+
     // Font và Kích thước đã tối ưu
     private static final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 30);
     private static final Font FONT_BUTTON = new Font("Segoe UI", Font.BOLD, 14);
+    private static final Font FONT_PAGE_BUTTON = new Font("Segoe UI", Font.PLAIN, 14); // Font cho nút phân trang
     private static final Dimension DIM_BUTTON = new Dimension(110, 38);
     private static final Dimension DIM_TOOLS_PANEL = new Dimension(10, 48);
 
     // Style cho Bảng
     private static final Font FONT_TABLE_HEADER = new Font("Segoe UI", Font.BOLD, 14);
     private static final Font FONT_TABLE_CELL = new Font("Segoe UI", Font.PLAIN, 14);
-    private static final Color CLR_TABLE_GRID = new Color(210, 210, 210);
-    private static final Color CLR_TABLE_HEADER_BG = new Color(240, 240, 240);
     private static final Border CELL_PADDING = new EmptyBorder(7, 8, 7, 8);
     private static final int TABLE_ROW_HEIGHT = 35;
 
@@ -99,24 +108,42 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     private DefaultTableModel mdlCT;
     private JLabel lbCT_TiLe;
 
-    // Các biến cho Live Search (Sản Phẩm)
+    // ... Các biến Live Search
     private JPopupMenu productSearchPopup;
     private JPanel productListPanel;
     private Timer searchTimer;
     private SwingWorker<List<SanPham>, Void> searchWorker;
     private boolean isUpdatingFromPopup = false;
-    
-    // Biến cho Live Search (Khuyến Mãi)
     private JPopupMenu kmSearchPopup;
     private JPanel kmListPanel;
     private Timer kmSearchTimer;
     private SwingWorker<List<KhuyenMai>, Void> kmSearchWorker;
     private boolean isUpdatingKmFromPopup = false;
     
-    // Biến con trỏ chuột
+    // ... Các biến con trỏ chuột
     private static final Cursor CURSOR_HAND = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR);
     private static final Cursor CURSOR_DEFAULT = Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
     private static final Cursor CURSOR_WAIT = Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR);
+
+    // ==== (MỚI) Biến Phân Trang ====
+    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_DISPLAY_LIMIT = 5; // Số lượng nút số trang hiển thị (vd: 1 2 3 4 5)
+
+    // Phân trang KM
+    private int kmCurrentPage = 1;
+    private int kmTotalPages = 1;
+    private List<KhuyenMai> kmFullList = Collections.emptyList(); // Cache
+    private JButton btnKmFirst, btnKmPrev, btnKmNext, btnKmLast;
+    private JLabel lbKmPageStatus;
+    private JPanel kmPageButtonsPanel; // Panel chứa các nút số trang động
+
+    // Phân trang CT
+    private int ctCurrentPage = 1;
+    private int ctTotalPages = 1;
+    private List<CT_KhuyenMai> ctFullList = Collections.emptyList(); // Cache
+    private JButton btnCtFirst, btnCtPrev, btnCtNext, btnCtLast;
+    private JLabel lbCtPageStatus;
+    private JPanel ctPageButtonsPanel; // Panel chứa các nút số trang động
 
 
     // ==== Validate ====
@@ -177,9 +204,15 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         topPanel.setOpaque(false);
         topPanel.add(buildFormKM(), BorderLayout.NORTH);
         topPanel.add(buildToolsKM(), BorderLayout.CENTER);
-        JScrollPane tableScrollPane = buildTableKM();
+        
         root.add(topPanel, BorderLayout.NORTH);
-        root.add(tableScrollPane, BorderLayout.CENTER);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(buildTableKM(), BorderLayout.CENTER); 
+        centerPanel.add(buildKmPaginationPanel(), BorderLayout.SOUTH);
+        
+        root.add(centerPanel, BorderLayout.CENTER);
         root.add(buildActionsKM(), BorderLayout.SOUTH);
         return root;
     }
@@ -203,7 +236,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         dcKM_NgayBD.setDateFormatString("yyyy-MM-dd");
         dcKM_NgayKT.setDateFormatString("yyyy-MM-dd");
         
-        // Đặt font cho các trường
         txtKM_Ma.setFont(FONT_TABLE_CELL);
         txtKM_Ten.setFont(FONT_TABLE_CELL);
         txtKM_MoTa.setFont(FONT_TABLE_CELL);
@@ -230,7 +262,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         btnKM_XuatCSV = mkBtn("Xuất CSV", new Color(0, 150, 136));
         
         JLabel lblTim = new JLabel("Tìm:");
-        lblTim.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD)); // Đặt font
+        lblTim.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD));
         tools.add(lblTim);
         tools.add(txtKM_Tim);
         tools.add(btnKM_Tim);
@@ -281,6 +313,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         tblKM.setFont(FONT_TABLE_CELL);
         tblKM.getTableHeader().setFont(FONT_TABLE_HEADER);
         
+        tblKM.getTableHeader().setReorderingAllowed(false);
+        
         DefaultTableCellRenderer cellRendererLeft = new DefaultTableCellRenderer();
         cellRendererLeft.setHorizontalAlignment(SwingConstants.LEFT);
         cellRendererLeft.setBorder(CELL_PADDING);
@@ -303,6 +337,36 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         
         return new JScrollPane(tblKM);
     }
+    
+    // (SỬA) Panel Phân Trang cho KM
+    private JComponent buildKmPaginationPanel() {
+        // (THAY ĐỔI) Giảm khoảng cách ngang từ 5 xuống 3
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0)); 
+        p.setOpaque(false);
+        p.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+        btnKmFirst = mkPageButton("|<", false); // Dùng hàm mới
+        btnKmPrev = mkPageButton("<", false);
+        btnKmNext = mkPageButton(">", false);
+        btnKmLast = mkPageButton(">|", false);
+        
+        // (THAY ĐỔI) Giảm khoảng cách ngang từ 5 xuống 3
+        kmPageButtonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0)); 
+        kmPageButtonsPanel.setOpaque(false);
+        
+        lbKmPageStatus = new JLabel("Trang 1 / 1 • 0 mục");
+        lbKmPageStatus.setFont(FONT_PAGE_BUTTON);
+        lbKmPageStatus.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+        p.add(btnKmFirst);
+        p.add(btnKmPrev);
+        p.add(kmPageButtonsPanel); 
+        p.add(btnKmNext);
+        p.add(btnKmLast);
+        p.add(lbKmPageStatus);
+
+        return p;
+    }
 
     // --- Cụm Chi Tiết (Bên phải) ---
 
@@ -318,7 +382,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         topPanel.setOpaque(false);
-
         topPanel.add(buildFormCT(), BorderLayout.CENTER);
 
         JPanel actionsPanelWrapper = new JPanel(new BorderLayout());
@@ -328,10 +391,14 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         
         topPanel.add(actionsPanelWrapper, BorderLayout.EAST);
         
-        JScrollPane tableScrollPane = buildTableCT();
-        
         root.add(topPanel, BorderLayout.NORTH);
-        root.add(tableScrollPane, BorderLayout.CENTER);
+
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(buildTableCT(), BorderLayout.CENTER);
+        centerPanel.add(buildCtPaginationPanel(), BorderLayout.SOUTH);
+        
+        root.add(centerPanel, BorderLayout.CENTER);
         
         return root;
     }
@@ -373,15 +440,12 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         productSearchPopup = new JPopupMenu();
         productSearchPopup.setFocusable(false);
         productSearchPopup.setBorder(BorderFactory.createLineBorder(CLR_BORDER));
-
         productListPanel = new JPanel();
         productListPanel.setLayout(new BoxLayout(productListPanel, BoxLayout.Y_AXIS));
-
         JScrollPane popupScroll = new JScrollPane(productListPanel);
         popupScroll.setBorder(null);
         popupScroll.setPreferredSize(new Dimension(350, 350)); 
         productSearchPopup.add(popupScroll);
-
         searchTimer = new Timer(300, e -> triggerSearchWorker());
         searchTimer.setRepeats(false);
 
@@ -416,7 +480,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     }
 
     private JScrollPane buildTableCT() {
-        String[] colsCT = {"Mã SP", "Mã KM", "Loại CT", "Giá trị"};
+        String[] colsCT = {"Mã SP", "Loại CT", "Tỉ lệ"};
         mdlCT = new DefaultTableModel(colsCT, 0) {
             public boolean isCellEditable(int r, int c) {
                 return false;
@@ -428,6 +492,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         tblCT.setFont(FONT_TABLE_CELL);
         tblCT.getTableHeader().setFont(FONT_TABLE_HEADER);
         
+        tblCT.getTableHeader().setReorderingAllowed(false);
+        
         DefaultTableCellRenderer cellRendererLeft = new DefaultTableCellRenderer();
         cellRendererLeft.setHorizontalAlignment(SwingConstants.LEFT);
         cellRendererLeft.setBorder(CELL_PADDING);
@@ -438,11 +504,9 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         DefaultTableCellRenderer tiLeRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
                 try {
-                    String loaiKM_Str = String.valueOf(table.getValueAt(row, 2));
+                    String loaiKM_Str = String.valueOf(table.getValueAt(row, 1));
                     double tiLe = (Double) value;
 
                     if (loaiKM_Str.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
@@ -450,38 +514,65 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     } else {
                         ((JLabel) c).setText(formatGia(tiLe));
                     }
-
                 } catch (Exception e) {
                     ((JLabel) c).setText(value.toString());
                 }
-
                 ((JLabel) c).setHorizontalAlignment(SwingConstants.RIGHT);
                 ((JLabel) c).setBorder(CELL_PADDING);
-
                 return c;
             }
         };
 
         tblCT.getColumnModel().getColumn(0).setCellRenderer(cellRendererCenter);
-        tblCT.getColumnModel().getColumn(1).setCellRenderer(cellRendererCenter);
-        tblCT.getColumnModel().getColumn(2).setCellRenderer(cellRendererLeft);
-        tblCT.getColumnModel().getColumn(3).setCellRenderer(tiLeRenderer);
+        tblCT.getColumnModel().getColumn(1).setCellRenderer(cellRendererLeft);
+        tblCT.getColumnModel().getColumn(2).setCellRenderer(tiLeRenderer);
 
         tblCT.getColumnModel().getColumn(0).setPreferredWidth(80);
-        tblCT.getColumnModel().getColumn(1).setPreferredWidth(80);
-        tblCT.getColumnModel().getColumn(2).setPreferredWidth(160);
-        tblCT.getColumnModel().getColumn(3).setPreferredWidth(100);
+        tblCT.getColumnModel().getColumn(1).setPreferredWidth(160);
+        tblCT.getColumnModel().getColumn(2).setPreferredWidth(100);
 
         tblCT.addMouseListener(this);
         
         return new JScrollPane(tblCT);
     }
+    
+    // (SỬA) Panel Phân Trang cho CT
+    private JComponent buildCtPaginationPanel() {
+        // (THAY ĐỔI) Giảm khoảng cách ngang từ 5 xuống 3
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
+        p.setOpaque(false);
+        p.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+        btnCtFirst = mkPageButton("|<", false);
+        btnCtPrev = mkPageButton("<", false);
+        btnCtNext = mkPageButton(">", false);
+        btnCtLast = mkPageButton(">|", false);
+
+        // (THAY ĐỔI) Giảm khoảng cách ngang từ 5 xuống 3
+        ctPageButtonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
+        ctPageButtonsPanel.setOpaque(false);
+        
+        lbCtPageStatus = new JLabel("Trang 1 / 1 • 0 mục");
+        lbCtPageStatus.setFont(FONT_PAGE_BUTTON);
+        lbCtPageStatus.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+        p.add(btnCtFirst);
+        p.add(btnCtPrev);
+        p.add(ctPageButtonsPanel); 
+        p.add(btnCtNext);
+        p.add(btnCtLast);
+        p.add(lbCtPageStatus);
+
+        return p;
+    }
+
 
     // =================================================================
     // SECTION: GÁN SỰ KIỆN (EVENT BINDING)
     // =================================================================
 
     private void bindEvents() {
+        // ... (Các nút CRUD)
         btnKM_Them.addActionListener(this);
         btnKM_Sua.addActionListener(this);
         btnKM_Xoa.addActionListener(this);
@@ -491,6 +582,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         btnKM_XuatCSV.addActionListener(this);
         txtKM_Tim.addActionListener(this); 
         
+        // ... (Live search KM)
         txtKM_Tim.getDocument().addDocumentListener(new DocumentListener() {
             private void triggerSearch() {
                 if (isUpdatingKmFromPopup) return;
@@ -500,7 +592,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             public void removeUpdate(DocumentEvent e) { triggerSearch(); }
             public void changedUpdate(DocumentEvent e) { triggerSearch(); }
         });
-
         txtKM_Tim.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
@@ -513,14 +604,16 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         
         
         tblKM.addMouseListener(this);
+        
+        // ... (Các nút CT)
         btnCT_Them.addActionListener(this);
         btnCT_Sua.addActionListener(this);
         btnCT_Xoa.addActionListener(this);
         btnCT_Moi.addActionListener(this);
         tblCT.addMouseListener(this);
-
         cbCT_LoaiKM.addActionListener(this);
 
+        // ... (Live search SP)
         txtCT_MaSP.getDocument().addDocumentListener(new DocumentListener() {
             private void triggerSearch() {
                 if (isUpdatingFromPopup) return;
@@ -530,7 +623,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             public void removeUpdate(DocumentEvent e) { triggerSearch(); }
             public void changedUpdate(DocumentEvent e) { triggerSearch(); }
         });
-
         txtCT_MaSP.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
@@ -540,6 +632,17 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 }
             }
         });
+
+        // (MỚI) Gán sự kiện cho các nút phân trang
+        btnKmFirst.addActionListener(this);
+        btnKmPrev.addActionListener(this);
+        btnKmNext.addActionListener(this);
+        btnKmLast.addActionListener(this);
+        
+        btnCtFirst.addActionListener(this);
+        btnCtPrev.addActionListener(this);
+        btnCtNext.addActionListener(this);
+        btnCtLast.addActionListener(this);
     }
 
     // =================================================================
@@ -567,11 +670,57 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         }
     }
 
+    private void populateTableCT(List<CT_KhuyenMai> ds) {
+        mdlCT.setRowCount(0);
+        for (CT_KhuyenMai ct : ds) {
+            mdlCT.addRow(new Object[]{
+                    ct.getSanPham().getMaSP(),
+                    ct.getLoaiKM().toString(), 
+                    ct.getGiaTri()
+            });
+        }
+    }
+    
+    // (SỬA) Tải và hiển thị dữ liệu KM theo trang
+    private void showKmPage() {
+        int totalRows = kmFullList.size();
+        kmTotalPages = (int) Math.ceil((double) totalRows / PAGE_SIZE);
+        if (kmTotalPages == 0) kmTotalPages = 1;
+        if (kmCurrentPage > kmTotalPages) kmCurrentPage = kmTotalPages;
+        if (kmCurrentPage < 1) kmCurrentPage = 1;
+        
+        int startIndex = (kmCurrentPage - 1) * PAGE_SIZE;
+        int endIndex = Math.min(startIndex + PAGE_SIZE, totalRows);
+        
+        List<KhuyenMai> pageData = (totalRows > 0) ? kmFullList.subList(startIndex, endIndex) : Collections.emptyList();
+        populateTableKM(pageData);
+        updateKmPaginationControls();
+    }
+    
+    // (SỬA) Tải và hiển thị dữ liệu CT theo trang
+    private void showCtPage() {
+        int totalRows = ctFullList.size();
+        ctTotalPages = (int) Math.ceil((double) totalRows / PAGE_SIZE);
+        if (ctTotalPages == 0) ctTotalPages = 1;
+        if (ctCurrentPage > ctTotalPages) ctCurrentPage = ctTotalPages;
+        if (ctCurrentPage < 1) ctCurrentPage = 1;
+
+        int startIndex = (ctCurrentPage - 1) * PAGE_SIZE;
+        int endIndex = Math.min(startIndex + PAGE_SIZE, totalRows);
+
+        List<CT_KhuyenMai> pageData = (totalRows > 0) ? ctFullList.subList(startIndex, endIndex) : Collections.emptyList();
+        populateTableCT(pageData);
+        updateCtPaginationControls();
+    }
+
+
     private void loadTableKM() {
         setKMControlsEnabled(false); 
         setCTControlsEnabled(false); 
         setCursor(CURSOR_WAIT);
         mdlKM.setRowCount(0); 
+        
+        kmCurrentPage = 1;
 
         new SwingWorker<List<KhuyenMai>, Void>() {
             @Override
@@ -582,10 +731,13 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             @Override
             protected void done() {
                 try {
-                    populateTableKM(get());
+                    kmFullList = get();
+                    showKmPage();
                 } catch (Exception e) {
                     msg("Lỗi tải KM: " + e.getMessage());
                     e.printStackTrace();
+                    kmFullList = Collections.emptyList();
+                    showKmPage();
                 } finally {
                     setKMControlsEnabled(true);
                     setCTControlsEnabled(false); 
@@ -596,21 +748,11 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         }.execute();
     }
 
-    private void populateTableCT(List<CT_KhuyenMai> ds) {
-        mdlCT.setRowCount(0);
-        for (CT_KhuyenMai ct : ds) {
-            mdlCT.addRow(new Object[]{
-                    ct.getSanPham().getMaSP(),
-                    ct.getKhuyenMai().getMaKM(),
-                    ct.getLoaiKM().toString(), 
-                    ct.getGiaTri()
-            });
-        }
-    }
-
     private void loadTableCT(int maKM) {
         if (maKM == -1) {
             mdlCT.setRowCount(0);
+            ctFullList = Collections.emptyList();
+            showCtPage(); 
             return;
         }
         
@@ -618,6 +760,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         setCTControlsEnabled(false); 
         setCursor(CURSOR_WAIT);
         mdlCT.setRowCount(0); 
+        
+        // ctCurrentPage = 1; // Đã reset trong handleClickTableKM
 
         new SwingWorker<List<CT_KhuyenMai>, Void>() {
             @Override
@@ -628,10 +772,13 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             @Override
             protected void done() {
                 try {
-                    populateTableCT(get());
+                    ctFullList = get();
+                    showCtPage();
                 } catch (Exception e) {
                     msg("Lỗi tải Chi Tiết KM: " + e.getMessage());
                     e.printStackTrace();
+                    ctFullList = Collections.emptyList();
+                    showCtPage();
                 } finally {
                     setKMControlsEnabled(true);
                     setCTControlsEnabled(true); 
@@ -648,6 +795,27 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     @Override
     public void actionPerformed(ActionEvent e) {
         Object s = e.getSource();
+        String cmd = e.getActionCommand(); // (MỚI) Lấy ActionCommand
+        
+        // (MỚI) Ưu tiên xử lý các nút phân trang động
+        if (cmd != null) {
+            if (cmd.startsWith("km_page_")) {
+                try {
+                    kmCurrentPage = Integer.parseInt(cmd.substring(8));
+                    showKmPage();
+                } catch (NumberFormatException ex) {}
+                return; // Đã xử lý, thoát
+            }
+            if (cmd.startsWith("ct_page_")) {
+                try {
+                    ctCurrentPage = Integer.parseInt(cmd.substring(8));
+                    showCtPage();
+                } catch (NumberFormatException ex) {}
+                return; // Đã xử lý, thoát
+            }
+        }
+        
+        // Xử lý các nút CRUD
         if (s == btnKM_Them) handleThemKM();
         else if (s == btnKM_Sua) handleSuaKM();
         else if (s == btnKM_Xoa) handleXoaKM();
@@ -663,6 +831,17 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         else if (s == cbCT_LoaiKM) {
             updateTiLeLabel();
         }
+        
+        // Xử lý các nút phân trang cố định
+        else if (s == btnKmFirst) { kmCurrentPage = 1; showKmPage(); }
+        else if (s == btnKmPrev) { kmCurrentPage--; showKmPage(); }
+        else if (s == btnKmNext) { kmCurrentPage++; showKmPage(); }
+        else if (s == btnKmLast) { kmCurrentPage = kmTotalPages; showKmPage(); }
+        
+        else if (s == btnCtFirst) { ctCurrentPage = 1; showCtPage(); }
+        else if (s == btnCtPrev) { ctCurrentPage--; showCtPage(); }
+        else if (s == btnCtNext) { ctCurrentPage++; showCtPage(); }
+        else if (s == btnCtLast) { ctCurrentPage = ctTotalPages; showCtPage(); }
     }
 
     @Override
@@ -702,8 +881,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     KhuyenMai kmDaThem = get();
                     if (kmDaThem != null) {
                         msg("Đã thêm KM, mã = " + kmDaThem.getMaKM());
-                        loadTableKM();
-                        selectKMRowById(kmDaThem.getMaKM());
+                        loadTableKM(); // Tải lại
+                        // TODO: Tương lai có thể tìm trang chứa KM mới
                     } else {
                         msg("Lỗi thêm KM: DAO trả về null");
                         setKMControlsEnabled(true);
@@ -744,8 +923,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 try {
                     if (get()) {
                         msg("Đã cập nhật KM");
-                        loadTableKM();
-                        selectKMRowById(kmSua.getMaKM());
+                        loadTableKM(); // Tải lại
+                        // TODO: Tương lai có thể tìm trang chứa KM vừa sửa
                     } else {
                         msg("Lỗi cập nhật KM");
                         setKMControlsEnabled(true);
@@ -763,13 +942,14 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     }
 
     private void handleXoaKM() {
-        int r = tblKM.getSelectedRow();
-        if (r == -1) {
-            msg("Chọn dòng để xóa");
-            return;
+        int id;
+        try {
+            id = Integer.parseInt(txtKM_Ma.getText().trim());
+            if (id <= 0) throw new Exception();
+        } catch (Exception ex) {
+             msg("Chọn một khuyến mãi (bên trái) để xóa");
+             return;
         }
-        int modelRow = tblKM.convertRowIndexToModel(r);
-        int id = Integer.parseInt(String.valueOf(mdlKM.getValueAt(modelRow, 0)));
 
         if (JOptionPane.showConfirmDialog(this, "Xóa KM " + id + "? (sẽ xóa luôn chi tiết)", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
             
@@ -788,7 +968,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     try {
                         if (get()) {
                             loadTableKM(); 
-                            clearKMForm();
                         } else {
                             msg("Lỗi xóa KM");
                             setKMControlsEnabled(true);
@@ -814,19 +993,24 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         if (kmSearchPopup != null) {
             kmSearchPopup.setVisible(false);
         }
+        
+        kmCurrentPage = 1; 
 
         new SwingWorker<List<KhuyenMai>, Void>() {
             @Override
             protected List<KhuyenMai> doInBackground() throws Exception {
-                return daoKM.search(keyword);
+                return daoKM.search(keyword); 
             }
 
             @Override
             protected void done() {
                 try {
-                    populateTableKM(get());
+                    kmFullList = get(); 
+                    showKmPage();      
                 } catch (Exception ex) {
                     msg("Lỗi tìm KM: " + ex.getMessage());
+                    kmFullList = Collections.emptyList();
+                    showKmPage();
                 } finally {
                     setKMControlsEnabled(true);
                     setCTControlsEnabled(false);
@@ -843,7 +1027,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             kmSearchPopup.setVisible(false);
         }
         loadTableKM(); 
-        clearKMForm(); 
     }
 
     private void handleThemCT() {
@@ -894,6 +1077,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     boolean insertSuccess = get(); 
                     if (insertSuccess) {
                         msg("Thêm chi tiết thành công.");
+                        ctCurrentPage = 1;
                         loadTableCT(kmID); 
                         clearCTForm();
                     } else {
@@ -927,14 +1111,12 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     }
 
     private void handleSuaCT() {
-        int r = tblCT.getSelectedRow();
-        if (r == -1) {
-            msg("Phải chọn 1 dòng chi tiết để sửa");
-            return;
+        if (txtCT_MaSP.getText().trim().isEmpty()) {
+             msg("Chọn một chi tiết (bên phải) để sửa");
+             return;
         }
         if (!validCT(true)) return;
         
-        int modelRow = tblCT.convertRowIndexToModel(r);
         CT_KhuyenMai ctSua;
         int kmID;
         
@@ -946,11 +1128,20 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             return;
         }
 
-        String spGoc = String.valueOf(mdlCT.getValueAt(modelRow, 0));
-        String loaiGoc = String.valueOf(mdlCT.getValueAt(modelRow, 2)); 
-
-        if (!ctSua.getSanPham().getMaSP().equals(spGoc) || !ctSua.getLoaiKM().toString().equals(loaiGoc)) {
-            msg("Không thể thay đổi Mã SP hoặc Loại CT khi cập nhật. Hãy Xóa và Thêm mới.");
+        String spGoc = "";
+        String loaiGoc = "";
+        int r = tblCT.getSelectedRow();
+        if (r >= 0) {
+            int modelRow = tblCT.convertRowIndexToModel(r);
+            int fullListIndex = (ctCurrentPage - 1) * PAGE_SIZE + modelRow;
+            if (fullListIndex < ctFullList.size()) {
+                spGoc = ctFullList.get(fullListIndex).getSanPham().getMaSP();
+                loaiGoc = ctFullList.get(fullListIndex).getLoaiKM().toString();
+            }
+        }
+        
+        if (spGoc.isEmpty() || !ctSua.getSanPham().getMaSP().equals(spGoc) || !ctSua.getLoaiKM().toString().equals(loaiGoc)) {
+            msg("Không thể thay đổi Mã SP hoặc Loại CT khi cập nhật. Hãy Xóa và Thêm mới.\n(Hãy đảm bảo bạn đã click vào dòng trong bảng trước khi Sửa)");
             return;
         }
 
@@ -969,7 +1160,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 try {
                     if (get()) {
                         msg("Cập nhật chi tiết thành công.");
-                        loadTableCT(kmID); 
+                        loadTableCT(kmID);
                         clearCTForm();
                     } else {
                         msg("Lỗi lưu CT");
@@ -988,16 +1179,20 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     }
 
     private void handleXoaCT() {
-        int r = tblCT.getSelectedRow();
-        if (r == -1) {
-            msg("Chọn dòng CT để xóa");
-            return;
+        String maSP = txtCT_MaSP.getText().trim();
+        if (maSP.isEmpty()) {
+             msg("Chọn một chi tiết (bên phải) để xóa");
+             return;
         }
         
-        int modelRow = tblCT.convertRowIndexToModel(r);
-        String maSP = String.valueOf(mdlCT.getValueAt(modelRow, 0));
-        int kmID = Integer.parseInt(String.valueOf(mdlCT.getValueAt(modelRow, 1)));
-        String loaiKM_Str = String.valueOf(mdlCT.getValueAt(modelRow, 2));
+        int kmID = getSelectedKMId();
+        if (kmID == -1) {
+             msg("Lỗi: Không xác định được Mã KM đang chọn.");
+             return;
+        }
+        
+        String loaiKM_Str = String.valueOf(cbCT_LoaiKM.getSelectedItem());
+
 
         if (JOptionPane.showConfirmDialog(this, "Xóa CT SP " + maSP + " (" + loaiKM_Str + ") ?", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
             
@@ -1021,6 +1216,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                     try {
                         if (get()) {
                             msg("Xóa chi tiết thành công.");
+                            ctCurrentPage = 1;
                             loadTableCT(kmID); 
                             clearCTForm();
                         } else {
@@ -1048,10 +1244,15 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         int r = tblKM.getSelectedRow();
         if (r >= 0) {
             int modelRow = tblKM.convertRowIndexToModel(r);
-            fillKMFormFromRow(modelRow);
+            int fullListIndex = (kmCurrentPage - 1) * PAGE_SIZE + modelRow;
+            if (fullListIndex >= kmFullList.size()) return;
             
-            int maKM = Integer.parseInt(String.valueOf(mdlKM.getValueAt(modelRow, 0)));
-            loadTableCT(maKM); 
+            KhuyenMai km = kmFullList.get(fullListIndex);
+            
+            fillKMFormFromRowObject(km);
+            
+            ctCurrentPage = 1;
+            loadTableCT(km.getMaKM()); 
             
             setCTControlsEnabled(true); 
         }
@@ -1065,10 +1266,14 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         int r = tblCT.getSelectedRow();
         if (r >= 0) {
             int modelRow = tblCT.convertRowIndexToModel(r);
-            txtCT_MaSP.setText(String.valueOf(mdlCT.getValueAt(modelRow, 0)));
-            txtCT_MaKM.setText(String.valueOf(mdlCT.getValueAt(modelRow, 1)));
-            cbCT_LoaiKM.setSelectedItem(String.valueOf(mdlCT.getValueAt(modelRow, 2)));
-            txtCT_TiLe.setText(String.valueOf(mdlCT.getValueAt(modelRow, 3)));
+            int fullListIndex = (ctCurrentPage - 1) * PAGE_SIZE + modelRow;
+            if (fullListIndex >= ctFullList.size()) return;
+            
+            CT_KhuyenMai ct = ctFullList.get(fullListIndex);
+            
+            txtCT_MaSP.setText(ct.getSanPham().getMaSP());
+            cbCT_LoaiKM.setSelectedItem(ct.getLoaiKM().toString());
+            txtCT_TiLe.setText(String.valueOf(ct.getGiaTri()));
 
             updateTiLeLabel();
         }
@@ -1088,23 +1293,18 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             txtKM_Ten.requestFocus();
             return false;
         }
-
         java.util.Date ngayBD = dcKM_NgayBD.getDate();
         java.util.Date ngayKT = dcKM_NgayKT.getDate();
-
         if (ngayBD == null || ngayKT == null) {
             msg("Ngày bắt đầu và kết thúc không được rỗng");
             return false;
         }
-
         if (ngayBD.after(ngayKT)) {
             msg("Ngày bắt đầu phải ≤ ngày kết thúc");
             return false;
         }
-
         return true;
     }
-
     private boolean validCT(boolean forUpdate) {
         int maKM = getSelectedKMId();
         if (maKM == -1) {
@@ -1135,7 +1335,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             txtCT_TiLe.requestFocus();
             return false;
         }
-
         String loaiKM_Str = String.valueOf(cbCT_LoaiKM.getSelectedItem());
         if (loaiKM_Str.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
             if (tl > 100 || tl <= 0) {
@@ -1144,14 +1343,12 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 return false;
             }
         }
-        
         return true;
     }
-
+    
     private KhuyenMai collectKMForInsert() {
         java.util.Date utilNgayBD = dcKM_NgayBD.getDate();
         java.util.Date utilNgayKT = dcKM_NgayKT.getDate();
-
         return new KhuyenMai(
                 txtKM_Ten.getText().trim(),
                 txtKM_MoTa.getText().trim(),
@@ -1159,11 +1356,10 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 new java.sql.Date(utilNgayKT.getTime())
         );
     }
-
+    
     private KhuyenMai collectKMForUpdate() {
         java.util.Date utilNgayBD = dcKM_NgayBD.getDate();
         java.util.Date utilNgayKT = dcKM_NgayKT.getDate();
-
         return new KhuyenMai(
                 Integer.parseInt(txtKM_Ma.getText().trim()),
                 txtKM_Ten.getText().trim(),
@@ -1172,24 +1368,20 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 new java.sql.Date(utilNgayKT.getTime())
         );
     }
-
+    
     private CT_KhuyenMai collectCT() {
         int kmID = Integer.parseInt(txtCT_MaKM.getText().trim());
         String spID = txtCT_MaSP.getText().trim();
-        float tiLe = Float.parseFloat(txtCT_TiLe.getText().trim());
-
+        double tiLe = Double.parseDouble(txtCT_TiLe.getText().trim());
         String loaiKM_Str = String.valueOf(cbCT_LoaiKM.getSelectedItem());
         LoaiKM loaiKM_Enum = getEnumFromDisplayString(loaiKM_Str);
         if (loaiKM_Enum == null) {
             throw new IllegalArgumentException("Loại KM không hợp lệ: " + loaiKM_Str);
         }
-
         KhuyenMai km = new KhuyenMai();
         km.setMaKM(kmID);
-        
         SanPham sp = new SanPham(loaiKM_Str, loaiKM_Str, tiLe); 
         sp.setMaSP(spID);
-        
         return new CT_KhuyenMai(km, sp, tiLe, loaiKM_Enum);
     }
 
@@ -1206,7 +1398,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         return null; 
     }
 
-    /** Tắt/Bật các control của panel KM (TRỪ BẢNG) */
     private void setKMControlsEnabled(boolean enabled) {
         btnKM_Them.setEnabled(enabled);
         btnKM_Sua.setEnabled(enabled);
@@ -1220,25 +1411,25 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         txtKM_Tim.setEnabled(enabled);
         dcKM_NgayBD.setEnabled(enabled);
         dcKM_NgayKT.setEnabled(enabled);
+        
+        updateKmPaginationControls(); // (SỬA) Gọi hàm cập nhật phân trang
     }
 
-    /** Tắt/Bật các control của panel CT (TRỪ BẢNG) */
     private void setCTControlsEnabled(boolean enabled) {
         btnCT_Them.setEnabled(enabled);
         btnCT_Sua.setEnabled(enabled);
         btnCT_Xoa.setEnabled(enabled);
         btnCT_Moi.setEnabled(enabled);
-
         txtCT_MaSP.setEnabled(enabled);
         cbCT_LoaiKM.setEnabled(enabled);
         txtCT_TiLe.setEnabled(enabled);
+
+        updateCtPaginationControls(); // (SỬA) Gọi hàm cập nhật phân trang
     }
 
     private void updateTiLeLabel() {
         if (lbCT_TiLe == null) return;
-
         String selected = String.valueOf(cbCT_LoaiKM.getSelectedItem());
-
         if (selected.equals(LoaiKM.GiamGiaPhanTramSP.toString())) {
             lbCT_TiLe.setText("Phần trăm (0-100):");
         } else if (selected.equals(LoaiKM.GiamGiaTienSP.toString())) {
@@ -1247,6 +1438,117 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             lbCT_TiLe.setText("Tỉ lệ (Giá trị/Phần trăm):");
         }
     }
+    
+    // (MỚI) Cập nhật trạng thái nút phân trang KM (LOGIC ĐẦY ĐỦ)
+    private void updateKmPaginationControls() {
+        int totalRows = kmFullList.size();
+        lbKmPageStatus.setText(String.format("Trang %d / %d • %d mục", kmCurrentPage, kmTotalPages, totalRows));
+
+        boolean enabled = btnKM_Tim.isEnabled(); // Kiểm tra xem controls có đang bật không
+        
+        btnKmFirst.setEnabled(enabled && kmCurrentPage > 1);
+        btnKmPrev.setEnabled(enabled && kmCurrentPage > 1);
+        btnKmNext.setEnabled(enabled && kmCurrentPage < kmTotalPages);
+        btnKmLast.setEnabled(enabled && kmCurrentPage < kmTotalPages);
+
+        kmPageButtonsPanel.removeAll();
+        if (totalRows == 0) {
+            kmPageButtonsPanel.revalidate();
+            kmPageButtonsPanel.repaint();
+            return;
+        }
+
+        int start, end;
+        int limit = PAGE_DISPLAY_LIMIT;
+        if (kmTotalPages <= limit) {
+            start = 1;
+            end = kmTotalPages;
+        } else {
+            start = Math.max(1, kmCurrentPage - (limit / 2));
+            end = Math.min(kmTotalPages, start + limit - 1);
+            if (end == kmTotalPages) {
+                start = Math.max(1, kmTotalPages - limit + 1);
+            }
+        }
+
+        if (start > 1) {
+            kmPageButtonsPanel.add(mkPageButton("1", false, "km_page_1"));
+            if (start > 2) {
+                kmPageButtonsPanel.add(mkPageButton("...", false, null));
+            }
+        }
+
+        for (int i = start; i <= end; i++) {
+            boolean isActive = (i == kmCurrentPage);
+            kmPageButtonsPanel.add(mkPageButton(String.valueOf(i), isActive, "km_page_" + i));
+        }
+
+        if (end < kmTotalPages) {
+            if (end < kmTotalPages - 1) {
+                kmPageButtonsPanel.add(mkPageButton("...", false, null));
+            }
+            kmPageButtonsPanel.add(mkPageButton(String.valueOf(kmTotalPages), false, "km_page_" + kmTotalPages));
+        }
+
+        kmPageButtonsPanel.revalidate();
+        kmPageButtonsPanel.repaint();
+    }
+    
+    // (MỚI) Cập nhật trạng thái nút phân trang CT (LOGIC ĐẦY ĐỦ)
+    private void updateCtPaginationControls() {
+        int totalRows = ctFullList.size();
+        lbCtPageStatus.setText(String.format("Trang %d / %d • %d mục", ctCurrentPage, ctTotalPages, totalRows));
+        
+        boolean enabled = btnCT_Them.isEnabled();
+
+        btnCtFirst.setEnabled(enabled && ctCurrentPage > 1);
+        btnCtPrev.setEnabled(enabled && ctCurrentPage > 1);
+        btnCtNext.setEnabled(enabled && ctCurrentPage < ctTotalPages);
+        btnCtLast.setEnabled(enabled && ctCurrentPage < ctTotalPages);
+
+        ctPageButtonsPanel.removeAll();
+        if (totalRows == 0) {
+            ctPageButtonsPanel.revalidate();
+            ctPageButtonsPanel.repaint();
+            return;
+        }
+        
+        int start, end;
+        int limit = PAGE_DISPLAY_LIMIT;
+        if (ctTotalPages <= limit) {
+            start = 1;
+            end = ctTotalPages;
+        } else {
+            start = Math.max(1, ctCurrentPage - (limit / 2));
+            end = Math.min(ctTotalPages, start + limit - 1);
+            if (end == ctTotalPages) {
+                start = Math.max(1, ctTotalPages - limit + 1);
+            }
+        }
+
+        if (start > 1) {
+            ctPageButtonsPanel.add(mkPageButton("1", false, "ct_page_1"));
+            if (start > 2) {
+                ctPageButtonsPanel.add(mkPageButton("...", false, null));
+            }
+        }
+
+        for (int i = start; i <= end; i++) {
+            boolean isActive = (i == kmCurrentPage);
+            ctPageButtonsPanel.add(mkPageButton(String.valueOf(i), isActive, "ct_page_" + i));
+        }
+
+        if (end < kmTotalPages) {
+            if (end < kmTotalPages - 1) {
+                ctPageButtonsPanel.add(mkPageButton("...", false, null));
+            }
+            ctPageButtonsPanel.add(mkPageButton(String.valueOf(ctTotalPages), false, "ct_page_" + ctTotalPages));
+        }
+
+        ctPageButtonsPanel.revalidate();
+        ctPageButtonsPanel.repaint();
+    }
+
 
     // --- Live Search cho SẢN PHẨM ---
     
@@ -1254,23 +1556,19 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         if (searchWorker != null && !searchWorker.isDone()) {
             searchWorker.cancel(true);
         }
-
         String keyword = txtCT_MaSP.getText().trim();
         if (keyword.isEmpty()) {
             productSearchPopup.setVisible(false);
             return;
         }
-
         productListPanel.removeAll();
         productListPanel.add(new JLabel("  Đang tìm sản phẩm...  "));
         showProductPopup();
-
         searchWorker = new SwingWorker<List<SanPham>, Void>() {
             @Override
             protected List<SanPham> doInBackground() throws Exception {
                 return daoSP.searchByNameOrMa(keyword, 10);
             }
-
             @Override
             protected void done() {
                 if (isCancelled()) return; 
@@ -1311,23 +1609,19 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         if (kmSearchWorker != null && !kmSearchWorker.isDone()) {
             kmSearchWorker.cancel(true);
         }
-
         String keyword = txtKM_Tim.getText().trim();
         if (keyword.isEmpty()) {
             kmSearchPopup.setVisible(false);
             return;
         }
-
         kmListPanel.removeAll();
         kmListPanel.add(new JLabel("  Đang tìm chương trình...  "));
         showKmPopup();
-
         kmSearchWorker = new SwingWorker<List<KhuyenMai>, Void>() {
             @Override
             protected List<KhuyenMai> doInBackground() throws Exception {
                 return daoKM.search(keyword); 
             }
-
             @Override
             protected void done() {
                 if (isCancelled()) return;
@@ -1367,22 +1661,18 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         itemPanel.setBackground(UIManager.getColor("Panel.background"));
         itemPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, CLR_BORDER), 
-            new EmptyBorder(8, 10, 8, 10) // ✅ THAY ĐỔI: Tăng padding
+            new EmptyBorder(8, 10, 8, 10)
         ));
-        
         itemPanel.setCursor(CURSOR_HAND); 
-        
         JLabel nameLabel = new JLabel(km.getTenKM());
-        nameLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD)); // ✅ THAY ĐỔI: In đậm
+        nameLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD));
         itemPanel.add(nameLabel, BorderLayout.CENTER);
-        
         if (km.getMoTaKM() != null && !km.getMoTaKM().isEmpty()) {
             JLabel descLabel = new JLabel(km.getMoTaKM());
-            descLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.ITALIC, 13f)); // ✅ THAY ĐỔI: Tăng font
+            descLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.ITALIC, 13f));
             descLabel.setForeground(CLR_MUTED);
             itemPanel.add(descLabel, BorderLayout.SOUTH);
         }
-        
         itemPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -1392,18 +1682,15 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             public void mouseExited(MouseEvent e) {
                 itemPanel.setBackground(UIManager.getColor("Panel.background"));
             }
-            
             @Override
             public void mousePressed(MouseEvent e) {
                 isUpdatingKmFromPopup = true;
                 txtKM_Tim.setText(km.getTenKM());
                 isUpdatingKmFromPopup = false;
                 kmSearchPopup.setVisible(false);
-                
                 handleTimKM(); 
             }
         });
-        
         return itemPanel;
     }
     
@@ -1419,38 +1706,29 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         itemPanel.setBackground(UIManager.getColor("Panel.background"));
         itemPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, CLR_BORDER),
-            new EmptyBorder(10, 10, 10, 10) // ✅ THAY ĐỔI: Tăng padding
+            new EmptyBorder(10, 10, 10, 10)
         ));
-        
         itemPanel.setCursor(CURSOR_HAND);
-
         ImageIcon thumb = scaledOrPlaceholder(sp.getHinhAnhSP(), SEARCH_THUMB_SIZE, SEARCH_THUMB_SIZE);
         JLabel imgLabel = new JLabel(thumb);
         imgLabel.setPreferredSize(new Dimension(SEARCH_THUMB_SIZE, SEARCH_THUMB_SIZE));
         imgLabel.setVerticalAlignment(SwingConstants.TOP);
         itemPanel.add(imgLabel, BorderLayout.WEST);
-
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(false);
-
         JLabel nameLabel = new JLabel(sp.getTenSP());
-        nameLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD)); // Giữ in đậm
-
+        nameLabel.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD));
         JLabel priceLabel = new JLabel(formatGia(sp.getGiaSP()));
         priceLabel.setForeground(Color.RED);
-        priceLabel.setFont(FONT_TABLE_CELL); // ✅ THAY ĐỔI: Tăng font
-
+        priceLabel.setFont(FONT_TABLE_CELL);
         textPanel.add(nameLabel);
-        textPanel.add(Box.createRigidArea(new Dimension(0, 4))); // Thêm khoảng cách
+        textPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         textPanel.add(priceLabel);
-
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(textPanel, BorderLayout.NORTH);
-
         itemPanel.add(wrapperPanel, BorderLayout.CENTER);
-
         itemPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -1460,7 +1738,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             public void mouseExited(MouseEvent e) {
                 itemPanel.setBackground(UIManager.getColor("Panel.background"));
             }
-
             @Override
             public void mousePressed(MouseEvent e) {
                 productSearchPopup.setVisible(false);
@@ -1469,43 +1746,23 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 isUpdatingFromPopup = false;
             }
         });
-
         return itemPanel;
     }
-
-
-    private void selectKMRowById(int id) {
-        for (int i = 0; i < mdlKM.getRowCount(); i++) {
-            if (Integer.parseInt(String.valueOf(mdlKM.getValueAt(i, 0))) == id) {
-                tblKM.setRowSelectionInterval(i, i);
-                tblKM.scrollRectToVisible(tblKM.getCellRect(i, 0, true));
-                fillKMFormFromRow(i);
-                loadTableCT(id);
-                setCTControlsEnabled(true); 
-                break;
-            }
-        }
-    }
-
+    
     private int getSelectedKMId() {
-        int r = tblKM.getSelectedRow();
-        if (r < 0) return -1;
-        int modelRow = tblKM.convertRowIndexToModel(r);
         try {
-            return Integer.parseInt(String.valueOf(mdlKM.getValueAt(modelRow, 0)));
+            return Integer.parseInt(txtKM_Ma.getText().trim());
         } catch (Exception e) {
             return -1;
         }
     }
-
-    private void fillKMFormFromRow(int r) {
-        txtKM_Ma.setText(String.valueOf(mdlKM.getValueAt(r, 0)));
-        txtKM_Ten.setText(String.valueOf(mdlKM.getValueAt(r, 1)));
-        txtKM_MoTa.setText(String.valueOf(mdlKM.getValueAt(r, 2)));
-
-        dcKM_NgayBD.setDate((java.util.Date) mdlKM.getValueAt(r, 3));
-        dcKM_NgayKT.setDate((java.util.Date) mdlKM.getValueAt(r, 4));
-
+    
+    private void fillKMFormFromRowObject(KhuyenMai km) {
+        txtKM_Ma.setText(String.valueOf(km.getMaKM()));
+        txtKM_Ten.setText(km.getTenKM());
+        txtKM_MoTa.setText(km.getMoTaKM());
+        dcKM_NgayBD.setDate(km.getNgayBatDau());
+        dcKM_NgayKT.setDate(km.getNgayKetThuc());
         txtCT_MaKM.setText(txtKM_Ma.getText().trim());
     }
 
@@ -1513,16 +1770,16 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         txtKM_Ma.setText("");
         txtKM_Ten.setText("");
         txtKM_MoTa.setText("");
-
         dcKM_NgayBD.setDate(null);
         dcKM_NgayKT.setDate(null);
-
         tblKM.clearSelection();
         txtKM_Ten.requestFocus();
-        mdlCT.setRowCount(0);
+        
+        ctFullList = Collections.emptyList();
+        showCtPage();
+        
         clearCTForm();
         setCTControlsEnabled(false); 
-        
         if(kmSearchPopup != null) { 
             kmSearchPopup.setVisible(false);
         }
@@ -1535,7 +1792,6 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         } else {
             txtCT_MaKM.setText("");
         }
-        
         txtCT_TiLe.setText("");
         if (cbCT_LoaiKM.getItemCount() > 0) cbCT_LoaiKM.setSelectedIndex(0);
         tblCT.clearSelection();
@@ -1544,37 +1800,88 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
     private void addField(JPanel p, GridBagConstraints g, int row, String label, JComponent comp) {
         g.gridy = row; g.gridx = 0; g.weightx = 0;
-        
         JLabel l = new JLabel(label);
-        // ✅ THAY ĐỔI: Set font cho tất cả label
         l.setFont(FONT_TABLE_CELL.deriveFont(Font.BOLD)); 
-        
         p.add(l, g);
         g.gridx = 1; g.weightx = 1;
         p.add(comp, g);
     }
 
-    /**
-     * ✅ THAY ĐỔI: Quay về cách set màu đơn giản (setBackground) theo ý bạn
-     */
     private JButton mkBtn(String text, Color bg) {
         JButton b = new JButton(text);
-        b.setFont(FONT_BUTTON); // Giữ lại font đã Sửa
-        b.setPreferredSize(DIM_BUTTON); // Giữ lại kích thước đã Sửa
-        b.setCursor(CURSOR_HAND); // Giữ lại con trỏ chuột
-
-        // ✅ SỬA LỖI: Quay về code set màu GỐC
+        b.setFont(FONT_BUTTON);
+        b.setPreferredSize(DIM_BUTTON);
+        b.setCursor(CURSOR_HAND); 
         b.setFocusPainted(false);
         b.setBackground(bg);
-        b.setForeground(Color.WHITE); // Chữ auto màu trắng
-
-        // Xử lý ngoại lệ: Nút Vàng (Warning) nên dùng chữ đen
+        b.setForeground(Color.WHITE); 
         if (bg == CLR_WARNING || bg == CLR_MUTED) {
             b.setForeground(Color.BLACK);
+        }
+        return b;
+    }
+    
+    /**
+     * (MỚI) Hàm tiện ích để tạo nút phân trang
+     * (CẬP NHẬT) Xóa code vẽ viền thủ công và hover
+     * -> Để cho thư viện FlatLaf tự xử lý việc bo tròn và hiệu ứng
+     * @param text Văn bản trên nút (vd: "1", "<", "...")
+     * @param isActive Nút này có phải là trang hiện tại không
+     * @return một JButton đã được style
+     */
+    private JButton mkPageButton(String text, boolean isActive, String actionCommand) {
+        JButton b = new JButton(text);
+        b.setFont(FONT_PAGE_BUTTON);
+        b.setCursor(CURSOR_HAND);
+        b.setFocusPainted(false);
+        b.setMargin(new Insets(0, 0, 0, 0));
+        
+        // Giữ nguyên kích thước
+        if (text.length() > 2) {
+             b.setPreferredSize(new Dimension(45, 38));
+        } else {
+             b.setPreferredSize(new Dimension(38, 38));
+        }
+        
+        // ### THAY ĐỔI LỚN NHẤT ###
+        // KHÔNG setBorder thủ công nữa. Cứ để FlatLaf tự vẽ viền bo tròn.
+        
+        if (isActive) {
+            // Nút active (màu xanh): Tô nền xanh, chữ trắng
+            b.setBackground(CLR_PAGE_BUTTON_ACTIVE_BG);
+            b.setForeground(CLR_PAGE_BUTTON_ACTIVE_FG);
+            
+            // (THAY ĐỔI) Tắt viền để nó có cảm giác "đầy" (filled)
+            b.setBorderPainted(false); 
+            
+        } else {
+            // Nút inactive (màu trắng):
+            // -> KHÔNG LÀM GÌ CẢ.
+            // Cứ để FlatLaf tự vẽ nút mặc định (nền trắng, viền xám, có hover).
+        }
+
+        // Nút "..."
+        if ("...".equals(text)) {
+            // (THAY ĐỔI) Chỉ cần vô hiệu hóa nó
+            b.setEnabled(false);
+            b.setCursor(CURSOR_DEFAULT);
+            // FlatLaf sẽ tự động làm mờ text và giữ viền
+        } else {
+            // Chỉ gán lệnh và listener cho các nút có thể nhấn
+            b.setActionCommand(actionCommand); 
+            b.addActionListener(this); 
         }
         
         return b;
     }
+    
+    // (MỚI) Overload cho các nút First, Prev, Next, Last (không cần action command)
+    private JButton mkPageButton(String text, boolean isActive) {
+        JButton b = mkPageButton(text, isActive, null); // Gọi hàm chính
+        b.removeActionListener(this); // Xóa listener (vì chúng ta dùng listener theo biến)
+        return b;
+    }
+
 
     private void msg(String s) {
         JOptionPane.showMessageDialog(this, s);
@@ -1589,6 +1896,8 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             setCTControlsEnabled(false);
             setCursor(CURSOR_WAIT);
             
+            List<KhuyenMai> listToExport = kmFullList;
+            
             new SwingWorker<Void, Void>() {
                 @Override
                 protected Void doInBackground() throws Exception {
@@ -1596,12 +1905,12 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                             Path.of(fc.getSelectedFile().getAbsolutePath()),
                             StandardCharsets.UTF_8)) {
                         bw.write("MaKM,TenCT,MoTa,NgayBD,NgayKT\n");
-                        for (int i = 0; i < mdlKM.getRowCount(); i++) {
-                            bw.write(csv(mdlKM.getValueAt(i, 0)) + "," +
-                                    csv(mdlKM.getValueAt(i, 1)) + "," +
-                                    csv(mdlKM.getValueAt(i, 2)) + "," +
-                                    csv(mdlKM.getValueAt(i, 3)) + "," +
-                                    csv(mdlKM.getValueAt(i, 4)) + "\n");
+                        for (KhuyenMai km : listToExport) {
+                            bw.write(csv(km.getMaKM()) + "," +
+                                     csv(km.getTenKM()) + "," +
+                                     csv(km.getMoTaKM()) + "," +
+                                     csv(km.getNgayBatDau()) + "," +
+                                     csv(km.getNgayKetThuc()) + "\n");
                         }
                     }
                     return null;
@@ -1611,7 +1920,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
                 protected void done() {
                     try {
                         get(); 
-                        msg("Đã xuất CSV (tất cả) thành công!");
+                        msg("Đã xuất CSV (" + listToExport.size() + " dòng) thành công!");
                     } catch (Exception ex) {
                         msg("Lỗi xuất CSV: " + ex.getMessage());
                     } finally {
@@ -1680,10 +1989,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
     public static void main(String[] args) {
          try {
-             // ✅ THAY ĐỔI: Dùng FlatIntelliJLaf cho đẹp hơn
-             // UIManager.setLookAndFeel( new com.formdev.flatlaf.FlatLightLaf() );
              UIManager.setLookAndFeel( new com.formdev.flatlaf.FlatIntelliJLaf() ); 
-             // UIManager.setLookAndFeel( new com.formdev.flatlaf.FlatDarculaLaf() ); 
          } catch( Exception ex ) {
              System.err.println( "Failed to initialize LaF" );
              try {
