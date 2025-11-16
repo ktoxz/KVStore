@@ -1,6 +1,8 @@
 package com.gui;
 
 import com.entity.NhanVien;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class GUI_General extends JPanel {
+    private static final Logger log = LogManager.getLogger(GUI_General.class);
     private NhanVien nhanVien;
     private JPanel contentPanel;
     private JPanel currentTabPanel;
@@ -140,6 +143,14 @@ public class GUI_General extends JPanel {
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
+
+        // Tab Nhân Viên
+        JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
+        btnNhanVien.addActionListener(e -> showTab(tabNhanVien));
+        sidebarPanel.add(btnNhanVien);
+
+        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
         // Tab Khuyến mãi
         JButton btnKhuyenMai = createTabButton("Khuyến mãi", "🎁");
         btnKhuyenMai.addActionListener(e -> showTab(tabKhuyenMai));
@@ -151,13 +162,6 @@ public class GUI_General extends JPanel {
         JButton btnHuongDan = createTabButton("Hướng dẫn", "📖");
         btnHuongDan.addActionListener(e -> showTab(tabHuongDan));
         sidebarPanel.add(btnHuongDan);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Nhân Viên
-        JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
-        btnNhanVien.addActionListener(e -> showTab(tabNhanVien));
-        sidebarPanel.add(btnNhanVien);
 
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
@@ -260,6 +264,7 @@ public class GUI_General extends JPanel {
                 loginFrame.setContentPane(loginPanel);
                 loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 loginFrame.setSize(1080, 600);
+                loginFrame.pack();e
                 loginFrame.setLocationRelativeTo(null);
                 loginFrame.setResizable(false);
                 loginFrame.setVisible(true);

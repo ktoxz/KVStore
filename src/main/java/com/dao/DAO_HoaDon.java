@@ -223,9 +223,9 @@ public class DAO_HoaDon {
                     double thue = rs.getDouble("thue");
                     String maKH = rs.getString("maKH");
                     String maNV = rs.getString("maNV");
-
+                    NhanVien nv = daoNV.findById(maNV);
                     // Tạo đối tượng HoaDon theo constructor của UML
-                    hd = new HoaDon(maHD, ngayGD, tienKhach, thue, new KhachHang(maKH), daoNV.getFirstNV());
+                    hd = new HoaDon(maHD, ngayGD, tienKhach, thue, new KhachHang(maKH), nv);
                     // todo: sửa lại lấy nhân viên đúng theo mã nhân viên
                 }
             }

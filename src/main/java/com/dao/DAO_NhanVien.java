@@ -13,87 +13,10 @@ import java.util.List;
 import com.connectDB.ConnectDB;
 import com.entity.NhanVien;
 import com.enums.ChucVu;
+import com.service.EmailService;
 
 public class DAO_NhanVien {
-    /**
-     * Lấy mã nhân viên đầu tiên trong database
-     * @return Mã nhân viên hoặc null nếu không có
-     */
-    public NhanVien getFirstNV() {
-    	
-    	NhanVien nv = new NhanVien();
-    	String sql = "SELECT TOP 1 * FROM NhanVien";
-    	Connection con = ConnectDB.getCon();
-    	if (con == null) {
-            System.err.println("Kết nối DB chưa được thiết lập!");
-            return nv;
-        }
-    	
-        try (
-    		Statement stmt = con.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-    		){
-            
 
-            if (rs.next()) {
-                String maNV = rs.getString(1);
-                String tenNV = rs.getString(2);
-                boolean gioiTinh = rs.getBoolean(4);
-                String email = rs.getString(5);
-                String sdt = rs.getString(6);
-                LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
-                String chucVu = rs.getString(8);
-                ChucVu cv = ChucVu.valueOf(chucVu);
-                nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,cv);
-            }
-
-            rs.close();
-            stmt.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return nv;
-    }
-    
-    
-    public List<NhanVien> getAllNV() {
-    	List<NhanVien> ls = new ArrayList<NhanVien>();
-    	String sql = "SELECT * FROM NhanVien";
-    	Connection con = ConnectDB.getCon();
-    	
-    	if (con == null) {
-            System.err.println("Kết nối DB chưa được thiết lập!");
-            return ls;
-        }
-    	
-        try (
-        	Statement stmt = con.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-        	){
-           
-
-            while(rs.next()) {
-                String maNV = rs.getString(1);
-                String tenNV = rs.getString(2);
-                boolean gioiTinh = rs.getBoolean(4);
-                String email = rs.getString(5);
-                String sdt = rs.getString(6);
-                LocalDate ngayTaoTaiKhoan = rs.getDate(7).toLocalDate();
-                String chucVu = rs.getString(8);
-                ChucVu cv = ChucVu.valueOf(chucVu);
-                NhanVien nv = new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,cv);
-                ls.add(nv);
-            }
-
-            rs.close();
-            stmt.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        return ls;
-    }
-    
 	// =========================
 	//  ĐẾM NHÂN VIÊN (TÌM THEO NHIỀU TRƯỜNG)
 	// =========================
@@ -245,24 +168,26 @@ public class DAO_NhanVien {
     //  THÊM NHÂN VIÊN
     // =========================
     public boolean insertNhanVien(NhanVien nv) {
-        // bỏ cột matKhau, cho DB tự nhận NULL (hoặc xử lý ở chỗ khác)
-        String sql = "INSERT INTO NhanVien (maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO NhanVien (maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu, matKhauKichHoat) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Connection con = ConnectDB.getCon();
         if (con == null) return false;
-
+        String matKhauKichHoat = EmailService.generateActivationCode(5);
+        boolean isSent = EmailService.sendActivationEmail(nv, matKhauKichHoat);
+        if(!isSent) return false;
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, nv.getMaNV());
             ps.setString(2, nv.getTenNV());
             ps.setBoolean(3, nv.isGioiTinh());
             ps.setString(4, nv.getEmail());
             ps.setString(5, nv.getSdt());
-
             LocalDate d = nv.getNgayTaoTaiKhoan();
             if (d == null) d = LocalDate.now();
             ps.setDate(6, java.sql.Date.valueOf(d));
 
             ps.setString(7, nv.getChucVu().toDbValue());
+            ps.setString(8, matKhauKichHoat);
+
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi khi thêm nhân viên: " + e.getMessage());
@@ -300,23 +225,6 @@ public class DAO_NhanVien {
     }
 
     // =========================
-    //  XÓA NHÂN VIÊN
-    // =========================
-    public boolean deleteNhanVien(String maNV) {
-        String sql = "DELETE FROM NhanVien WHERE maNV=?";
-        Connection con = ConnectDB.getCon();
-        if (con == null) return false;
-
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, maNV);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi xóa nhân viên: " + e.getMessage());
-        }
-        return false;
-    }
-
-    // =========================
     //  TÌM NHÂN VIÊN THEO MÃ
     // =========================
     public NhanVien findById(String maNV) {
@@ -346,81 +254,109 @@ public class DAO_NhanVien {
     }
 
     public NhanVien checkLogin(String username, String password) {
-        // Nếu mật khẩu null ⇒ không cho đăng nhập
-        if (password == null) {
+        if (password == null || password.isEmpty()) {
             return null;
         }
 
-        String sql = "SELECT maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, chucVu, matKhau, matKhauKichHoat "
-                + "FROM NhanVien WHERE maNV = ?";
+        String sql = """
+        SELECT maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan,
+               chucVu, matKhau, matKhauKichHoat
+        FROM NhanVien
+        WHERE maNV = ?
+    """;
+
         Connection con = ConnectDB.getCon();
         if (con == null) return null;
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setString(1, username);
+
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String matKhau = rs.getString("matKhau");
-                    String matKhauKichHoat = rs.getString("matKhauKichHoat");
 
-                    boolean matchNormal     = matKhau != null && matKhau.equals(password);
-                    boolean matchActivation = matKhauKichHoat != null && matKhauKichHoat.equals(password);
+                if (!rs.next()) return null;
 
-                    if (!matchNormal && !matchActivation) {
-                        return null;
-                    }
+                String mk = rs.getString("matKhau");
+                String mkAc = rs.getString("matKhauKichHoat");
 
-                    String maNV = rs.getString("maNV");
-                    String tenNV = rs.getString("tenNV");
-                    boolean gioiTinh = rs.getBoolean("gioiTinh");
-                    String email = rs.getString("email");
-                    String sdt = rs.getString("sdt");
-                    LocalDate ngayTaoTaiKhoan = rs.getDate("ngayTaoTaiKhoan").toLocalDate();
-                    String chucVu = rs.getString("chucVu");
-                    ChucVu cv = ChucVu.valueOf(chucVu);
-                    return new NhanVien(maNV, tenNV, gioiTinh, email, sdt, ngayTaoTaiKhoan, cv);
-                }
+                boolean matchNormal = mk != null && mk.equals(password);
+                boolean matchActivation = mkAc != null && mkAc.equals(password);
+
+                if (!matchNormal && !matchActivation) return null;
+
+                return new NhanVien(
+                        rs.getString("maNV"),
+                        rs.getString("tenNV"),
+                        rs.getBoolean("gioiTinh"),
+                        rs.getString("email"),
+                        rs.getString("sdt"),
+                        rs.getDate("ngayTaoTaiKhoan").toLocalDate(),
+                        ChucVu.valueOf(rs.getString("chucVu"))
+                );
             }
+
         } catch (SQLException e) {
             System.err.println("Lỗi khi kiểm tra đăng nhập: " + e.getMessage());
         }
+
         return null;
     }
 
 
-    public boolean isLoginWithActivationPassword(String username, String password) {
-        if (password == null) return false;
 
-        String sql = "SELECT 1 FROM NhanVien WHERE maNV = ? AND matKhauKichHoat = ?";
+    public boolean isLoginWithActivationPassword(String username, String password) {
+        if (password == null || password.isEmpty()) return false;
+
+        String sql = """
+        SELECT 1 FROM NhanVien
+        WHERE maNV = ? AND matKhauKichHoat = ?
+    """;
+
         Connection con = ConnectDB.getCon();
         if (con == null) return false;
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, username);
             ps.setString(2, password);
+
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
+
         } catch (SQLException e) {
             System.err.println("Lỗi khi kiểm tra mật khẩu kích hoạt: " + e.getMessage());
         }
+
         return false;
     }
 
+
     public boolean changePasswordFromActivation(String maNV, String activationCode, String newPassword) {
-        String sql = "UPDATE NhanVien SET matKhau=?, matKhauKichHoat=NULL WHERE maNV=? AND matKhauKichHoat=?";
+
+        String sql = """
+        UPDATE NhanVien
+        SET matKhau = ?, matKhauKichHoat = NULL
+        WHERE maNV = ? AND matKhauKichHoat = ?
+    """;
+
         Connection con = ConnectDB.getCon();
         if (con == null) return false;
+
         try (PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setString(1, newPassword);
             ps.setString(2, maNV);
             ps.setString(3, activationCode);
+
             return ps.executeUpdate() > 0;
+
         } catch (SQLException e) {
             System.err.println("Lỗi khi đổi mật khẩu lần đầu: " + e.getMessage());
         }
+
         return false;
     }
+
 
 
 }

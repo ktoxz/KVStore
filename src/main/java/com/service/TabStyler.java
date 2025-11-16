@@ -1,4 +1,4 @@
-package com.gui;
+package com.service;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -14,9 +14,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.plaf.FontUIResource;
 
-/**
- * Helper utilities to keep all management tabs visually consistent.
- */
 public final class TabStyler {
     private static final String HEADER_PROPERTY = "tabHeader";
 
@@ -27,12 +24,7 @@ public final class TabStyler {
     private static final Color HEADER_COLOR = new Color(0, 90, 200);
 
     private TabStyler() {
-        // utility
     }
-
-    /**
-     * Creates a light-weight header that aligns the title on the top-left corner.
-     */
     public static JPanel createHeader(String title) {
         JLabel lblTitle = new JLabel(title);
         lblTitle.setFont(HEADER_FONT);

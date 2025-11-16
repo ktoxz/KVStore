@@ -10,15 +10,13 @@ import javax.swing.table.TableColumnModel;
 import com.dao.DAO_SanPham;
 import com.entity.SanPham;
 import com.enums.LoaiSP;
+import com.service.TabStyler;
 
 
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
 import java.util.List;
 
 import javax.swing.border.TitledBorder;

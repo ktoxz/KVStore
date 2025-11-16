@@ -12,10 +12,10 @@ import com.enums.ChucVu;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
 
 import com.dao.DAO_NhanVien;
 import com.entity.NhanVien;
+import com.service.TabStyler;
 import com.toedter.calendar.JDateChooser;
 
 public class TAB_NhanVien extends JPanel implements ActionListener, MouseListener {
@@ -179,7 +179,8 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         ImageIcon icon = new ImageIcon("src/main/resources/login_img.png");
 
         // scale xuống 300x300 rồi gán cho label
-        Image scaled = icon.getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH);
+        Image scaled = icon.getImage().getScaledInstance(250, 250, Image.SCALE_SMOOTH);
+
         lbImg.setIcon(new ImageIcon(scaled));
         main.add(lbImg, BorderLayout.SOUTH);
 
@@ -613,16 +614,4 @@ public class TAB_NhanVien extends JPanel implements ActionListener, MouseListene
         pnlPaging.repaint();
     }
 
-
-    // Demo nhanh (tuỳ chọn)
-//    public static void main(String[] args) {
-//        SwingUtilities.invokeLater(() -> {
-//            JFrame f = new JFrame("QL Nhân viên");
-//            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//            f.setContentPane(new TAB_NhanVien());
-//            f.setSize(1140, 660);
-//            f.setLocationRelativeTo(null);
-//            f.setVisible(true);
-//        });
-//    }
 }

@@ -9,9 +9,6 @@ import com.entity.SanPham;
 import com.enums.LoaiKM;
 
 // (MỚI) Import thư viện Look and Feel
-import com.formdev.flatlaf.FlatDarculaLaf;
-import com.formdev.flatlaf.FlatLightLaf;
-import com.formdev.flatlaf.FlatIntelliJLaf;
 
 
 import javax.swing.*;
@@ -27,24 +24,22 @@ import java.io.BufferedWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Date;
 import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects; // (MỚI)
 import java.util.regex.Pattern;
 import javax.swing.border.Border;
+
+import com.service.TabStyler;
 import com.toedter.calendar.JDateChooser;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.awt.RenderingHints;
 import java.awt.FontMetrics;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Phiên bản cuối: Tối ưu Layout, chống chớp/giật, Font lớn
