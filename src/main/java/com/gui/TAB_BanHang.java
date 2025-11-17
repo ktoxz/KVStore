@@ -746,6 +746,11 @@ public class TAB_BanHang extends JPanel {
                 return;
             }
 
+            // Nếu chọn chuyển khoản thì hiển thị mã QR Momo trước
+            if (rbBank.isSelected()) {
+                showMomoDialog();
+            }
+
             // Xử lý thanh toán thành công
             int confirm = JOptionPane.showConfirmDialog(this,
                 "Xác nhận thanh toán?\nTổng cộng: " + df.format(tienCanTra) + "đ",
@@ -992,7 +997,7 @@ public class TAB_BanHang extends JPanel {
                 tongTien += line;
                 // cập nhật lại cột Thành tiền để đúng theo KM
                 mdlTable.setValueAt(df.format(line), i, 5);
-                // đồng bộ lại cột đơn giá (dưới dạng số) để các nơi khác có thể dùng
+                // đồng bộ lại cột đơn giá (dưới dạng số) để các n��i khác có thể dùng
                 mdlTable.setValueAt(donGiaKM, i, 4);
             } catch (Exception ex) {
                 // Bỏ qua hàng lỗi
@@ -1492,6 +1497,55 @@ public class TAB_BanHang extends JPanel {
         if (field.getText().isEmpty()) {
             field.setText(searchPlaceholder);
             field.setForeground(new Color(160,160,160));
+        }
+    }
+
+    // Hiển thị dialog mã QR Momo khi thanh toán chuyển khoản
+    private void showMomoDialog() {
+        try {
+            java.net.URL imgUrl = getClass().getResource("/momo.jpg");
+            if (imgUrl == null) {
+                JOptionPane.showMessageDialog(this,
+                        "Không tìm thấy ảnh momo.jpg trong resources!",
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            ImageIcon originalIcon = new ImageIcon(imgUrl);
+            // Scale ảnh vừa với dialog, ví dụ chiều rộng tối đa 350px
+            int maxWidth = 350;
+            int width = originalIcon.getIconWidth();
+            int height = originalIcon.getIconHeight();
+            if (width > maxWidth) {
+                double ratio = (double) maxWidth / width;
+                width = maxWidth;
+                height = (int) (height * ratio);
+            }
+            Image scaled = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            ImageIcon scaledIcon = new ImageIcon(scaled);
+
+            JLabel lbl = new JLabel(scaledIcon);
+            lbl.setHorizontalAlignment(SwingConstants.CENTER);
+
+            JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Thanh toán qua Momo", Dialog.ModalityType.APPLICATION_MODAL);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            dialog.getContentPane().setLayout(new BorderLayout(10, 10));
+            dialog.getContentPane().add(lbl, BorderLayout.CENTER);
+
+            JLabel note = new JLabel("Vui lòng quét mã để chuyển khoản, sau đó nhấn Xác nhận để hoàn tất.");
+            note.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+            dialog.getContentPane().add(note, BorderLayout.SOUTH);
+
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Không thể hiển thị ảnh Momo:\n" + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }

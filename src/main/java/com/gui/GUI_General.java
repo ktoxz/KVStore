@@ -1,6 +1,7 @@
 package com.gui;
 
 import com.entity.NhanVien;
+import com.enums.ChucVu;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,12 +16,12 @@ public class GUI_General extends JPanel {
     private JPanel contentPanel;
     private JPanel currentTabPanel;
     private TAB_KhuyenMai tabKhuyenMai;
-    private TAB_HuongDan tabHuongDan;
     private TAB_KhachHang tabKhachHang;
     private TAB_BanHang tabBanHang;
     private TAB_NhanVien tabNhanVien;
     private TAB_SanPham tabSanPham;
     private TAB_ManHinhChinh tabManHinhChinh;
+    private TAB_ThongKe tabThongKe;
 
     public GUI_General(NhanVien nhanVien) {
         if(nhanVien == null) {
@@ -35,16 +36,18 @@ public class GUI_General extends JPanel {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout());
 
-        tabKhuyenMai = new TAB_KhuyenMai();
-        tabHuongDan = new TAB_HuongDan();
-        tabKhachHang = new TAB_KhachHang();
-        tabBanHang = new TAB_BanHang(nhanVien);
-        tabNhanVien = new TAB_NhanVien();
-        tabSanPham = new TAB_SanPham();
+        setLayout(new BorderLayout());
         tabManHinhChinh = new TAB_ManHinhChinh();
+        tabBanHang = new TAB_BanHang(nhanVien);
+        tabKhachHang = new TAB_KhachHang();
+        tabThongKe = new TAB_ThongKe();
         tabManHinhChinh.setNhanVien(nhanVien);
+        if(nhanVien.getChucVu() == ChucVu.QUANLY) {
+            tabKhuyenMai = new TAB_KhuyenMai();
+            tabNhanVien = new TAB_NhanVien();
+            tabSanPham = new TAB_SanPham();
+        }
 
         // ================= HEADER PANEL =================
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -115,68 +118,51 @@ public class GUI_General extends JPanel {
     private void addTabButtons(JPanel sidebarPanel) {
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Tab Màn hình chính (thay thế Dashboard)
-        JButton btnDashboard = createTabButton("Màn hình chính", "🏠");
-        btnDashboard.addActionListener(e -> showTab(tabManHinhChinh));
-        sidebarPanel.add(btnDashboard);
+        // ======== TAB CHUNG CHO MỌI NHÂN VIÊN ========
+        addTabButton(sidebarPanel, "Màn hình chính", "src/main/resources/icons/home.png", tabManHinhChinh);
+        addTabButton(sidebarPanel, "Bán hàng", "src/main/resources/icons/shopping-cart.png", tabBanHang);
+        addTabButton(sidebarPanel, "Khách hàng", "src/main/resources/icons/user.png", tabKhachHang);
+        // Thống kê → tạo mới mỗi lần
+        addTabButton(sidebarPanel, "Thống kê", "src/main/resources/icons/chart-histogram.png", new TAB_ThongKe());
 
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        // ======== TAB CHỈ CHO QUẢN LÝ ========
+        if (nhanVien.getChucVu() == ChucVu.QUANLY) {
 
-        // Tab Bán hàng
-        JButton btnBanHang = createTabButton("Bán hàng", "🛒");
-        btnBanHang.addActionListener(e -> showTab(tabBanHang));
-        sidebarPanel.add(btnBanHang);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Sản phẩm
-        JButton btnSanPham = createTabButton("Sản phẩm", "📦");
-        btnSanPham.addActionListener(e -> showTab(tabSanPham));
-        sidebarPanel.add(btnSanPham);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Khách hàng
-        JButton btnKhachHang = createTabButton("Khách hàng", "👥");
-        btnKhachHang.addActionListener(e -> showTab(tabKhachHang));
-        sidebarPanel.add(btnKhachHang);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-
-        // Tab Nhân Viên
-        JButton btnNhanVien = createTabButton("Nhân Viên", "📖");
-        btnNhanVien.addActionListener(e -> showTab(tabNhanVien));
-        sidebarPanel.add(btnNhanVien);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Khuyến mãi
-        JButton btnKhuyenMai = createTabButton("Khuyến mãi", "🎁");
-        btnKhuyenMai.addActionListener(e -> showTab(tabKhuyenMai));
-        sidebarPanel.add(btnKhuyenMai);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Hướng dẫn
-        JButton btnHuongDan = createTabButton("Hướng dẫn", "📖");
-        btnHuongDan.addActionListener(e -> showTab(tabHuongDan));
-        sidebarPanel.add(btnHuongDan);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        // Tab Thống kê
-        JButton btnThongKe = createTabButton("Thống kê", "📖");
-        btnThongKe.addActionListener(e -> showTab(new TAB_ThongKe()));
-        sidebarPanel.add(btnThongKe);
-
-        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
+            // --- Header "Quản trị" ---
+            JLabel lblAdmin = new JLabel("   Quản trị");
+            lblAdmin.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            lblAdmin.setForeground(new Color(80, 80, 80));
+            lblAdmin.setBorder(BorderFactory.createEmptyBorder(15, 10, 5, 0));
+            sidebarPanel.add(lblAdmin);
+            addTabButton(sidebarPanel, "Sản phẩm", "src/main/resources/icons/boxes.png", tabSanPham);
+            addTabButton(sidebarPanel, "Nhân Viên", "src/main/resources/icons/team.png", tabNhanVien);
+            addTabButton(sidebarPanel, "Khuyến mãi", "src/main/resources/icons/megaphone.png", tabKhuyenMai);
+        }
         sidebarPanel.add(Box.createVerticalGlue());
     }
 
+
+
+    private void addTabButton(JPanel sidebarPanel, String title, String icon, JPanel targetPanel) {
+        JButton button = createTabButton(title, icon);
+        button.addActionListener(e -> showTab(targetPanel));
+        sidebarPanel.add(button);
+        sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+    }
+
+
+
     private JButton createTabButton(String text, String icon) {
-        JButton button = new JButton(icon + "  " + text);
+        JButton button = new JButton();
+        try {
+            ImageIcon imageIcon = new ImageIcon(icon);
+            Image img = imageIcon.getImage().getScaledInstance(22, 22, Image.SCALE_SMOOTH);
+            button.setIcon(new ImageIcon(img));
+            button.setText("  " + text);
+        } catch (Exception ex) {
+            button.setText(text); // fallback
+        }
+
         button.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setMaximumSize(new Dimension(250, 50));
@@ -201,6 +187,7 @@ public class GUI_General extends JPanel {
 
         return button;
     }
+
 
     private void showTab(JPanel tabPanel) {
         // Xóa tab hiện tại
