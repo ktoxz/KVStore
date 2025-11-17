@@ -28,7 +28,7 @@ public class DAO_ThongKe {
                 JOIN SanPham sp ON ct.maSP = sp.maSP
                 WHERE hd.ngayGiaoDich BETWEEN ? AND ?
                 GROUP BY sp.maSP, sp.tenSP
-                ORDER BY doanhThu DESC
+                ORDER BY doanhThu ASC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
@@ -89,7 +89,7 @@ public class DAO_ThongKe {
                 JOIN SanPham sp ON ct.maSP = sp.maSP
                 WHERE hd.ngayGiaoDich BETWEEN ? AND ?
                 GROUP BY sp.maSP, sp.tenSP
-                ORDER BY tongSoLuong DESC
+                ORDER BY tongSoLuong ASC
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
             stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
@@ -124,7 +124,7 @@ public class DAO_ThongKe {
                 JOIN SanPham sp ON ct.maSP = sp.maSP
                 WHERE hd.ngayGiaoDich BETWEEN ? AND ?
                 GROUP BY nv.maNV, nv.tenNV
-                ORDER BY doanhThu DESC
+                ORDER BY doanhThu ASC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
@@ -183,7 +183,7 @@ public class DAO_ThongKe {
                     AND hd.ngayGiaoDich BETWEEN ? AND ?
                 WHERE km.ngayBatDau <= ? AND km.ngayKetThuc >= ?
                 GROUP BY km.maKM, km.tenKM, sp.tenSP, km.ngayBatDau, km.ngayKetThuc
-                ORDER BY km.ngayBatDau DESC
+                ORDER BY km.ngayBatDau ASC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
@@ -251,7 +251,7 @@ public class DAO_ThongKe {
                 JOIN SanPham sp ON ct.maSP = sp.maSP
                 WHERE hd.ngayGiaoDich BETWEEN ? AND ?
                 GROUP BY sp.maSP, sp.tenSP
-                ORDER BY doanhThu DESC
+                ORDER BY doanhThu ASC
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
             stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
@@ -285,7 +285,7 @@ public class DAO_ThongKe {
                 JOIN SanPham sp ON ct.maSP = sp.maSP
                 WHERE hd.ngayGiaoDich BETWEEN ? AND ?
                 GROUP BY nv.maNV, nv.tenNV
-                ORDER BY doanhThu DESC
+                ORDER BY doanhThu ASC
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
             stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
@@ -320,7 +320,7 @@ public class DAO_ThongKe {
                     AND hd.ngayGiaoDich BETWEEN ? AND ?
                 WHERE km.ngayBatDau <= ? AND km.ngayKetThuc >= ?
                 GROUP BY km.maKM, km.tenKM, sp.tenSP, km.ngayBatDau, km.ngayKetThuc
-                ORDER BY km.ngayBatDau DESC
+                ORDER BY km.ngayBatDau ASC
                 """;
             PreparedStatement stmt = con.prepareStatement(sql);
             // 1-2: khoảng thời gian bán để tính số lượng & doanh thu
@@ -395,5 +395,103 @@ public class DAO_ThongKe {
     }
     
     
-    
+    // =============== HÓA ĐƠN CHI TIẾT (phục vụ tab Thống kê hóa đơn) ===============
+    public List<Object[]> getHoaDonTheoTrang(int page, int rowsPerPage, Date tuNgay, Date denNgay) {
+        List<Object[]> list = new ArrayList<>();
+        int offset = (page - 1) * rowsPerPage;
+        ConnectDB.getInstance();
+        Connection con = ConnectDB.getCon();
+        try {
+            String sql = """
+                    SELECT hd.maHoaDon,
+                           ISNULL(kh.tenKH, N'Khách lẻ') AS tenKH,
+                           nv.tenNV,
+                           hd.ngayGiaoDich,
+                           SUM(ct.soLuong * sp.giaSP * (1 + hd.thue/100.0)) AS tongTien
+                    FROM HoaDon hd
+                    LEFT JOIN KhachHang kh ON hd.maKH = kh.maKH
+                    JOIN NhanVien nv ON hd.maNV = nv.maNV
+                    JOIN CT_HoaDon ct ON hd.maHoaDon = ct.maHoaDon
+                    JOIN SanPham sp ON ct.maSP = sp.maSP
+                    WHERE hd.ngayGiaoDich BETWEEN ? AND ?
+                    GROUP BY hd.maHoaDon, kh.tenKH, nv.tenNV, hd.ngayGiaoDich
+                    ORDER BY hd.ngayGiaoDich ASC
+                    OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+                    """;
+            PreparedStatement stmt = con.prepareStatement(sql);
+            stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
+            stmt.setDate(2, new java.sql.Date(denNgay.getTime()));
+            stmt.setInt(3, offset);
+            stmt.setInt(4, rowsPerPage);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(new Object[]{
+                        rs.getString("maHoaDon"),
+                        rs.getString("tenKH"),
+                        rs.getString("tenNV"),
+                        rs.getDate("ngayGiaoDich"),
+                        rs.getDouble("tongTien")
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int getTongSoHoaDon(Date tuNgay, Date denNgay) {
+        ConnectDB.getInstance();
+        Connection con = ConnectDB.getCon();
+        try {
+            String sql = "SELECT COUNT(*) FROM HoaDon WHERE ngayGiaoDich BETWEEN ? AND ?";
+            PreparedStatement stmt = con.prepareStatement(sql);
+            stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
+            stmt.setDate(2, new java.sql.Date(denNgay.getTime()));
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public List<Object[]> getTatCaHoaDon(Date tuNgay, Date denNgay) {
+        List<Object[]> list = new ArrayList<>();
+        ConnectDB.getInstance();
+        Connection con = ConnectDB.getCon();
+        try {
+            String sql = """
+                    SELECT hd.maHoaDon,
+                           ISNULL(kh.tenKH, N'Khách lẻ') AS tenKH,
+                           nv.tenNV,
+                           hd.ngayGiaoDich,
+                           SUM(ct.soLuong * sp.giaSP * (1 + hd.thue/100.0)) AS tongTien
+                    FROM HoaDon hd
+                    LEFT JOIN KhachHang kh ON hd.maKH = kh.maKH
+                    JOIN NhanVien nv ON hd.maNV = nv.maNV
+                    JOIN CT_HoaDon ct ON hd.maHoaDon = ct.maHoaDon
+                    JOIN SanPham sp ON ct.maSP = sp.maSP
+                    WHERE hd.ngayGiaoDich BETWEEN ? AND ?
+                    GROUP BY hd.maHoaDon, kh.tenKH, nv.tenNV, hd.ngayGiaoDich
+                    ORDER BY hd.ngayGiaoDich ASC
+                    """;
+            PreparedStatement stmt = con.prepareStatement(sql);
+            stmt.setDate(1, new java.sql.Date(tuNgay.getTime()));
+            stmt.setDate(2, new java.sql.Date(denNgay.getTime()));
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(new Object[]{
+                        rs.getString("maHoaDon"),
+                        rs.getString("tenKH"),
+                        rs.getString("tenNV"),
+                        rs.getDate("ngayGiaoDich"),
+                        rs.getDouble("tongTien")
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }
+

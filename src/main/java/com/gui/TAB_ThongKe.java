@@ -19,6 +19,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+import javax.swing.RowFilter;
 
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -31,6 +32,9 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
 
+import java.awt.Desktop;
+import java.io.IOException;
+
 public class TAB_ThongKe extends JPanel implements ActionListener {
     private final DecimalFormat moneyFormat = new DecimalFormat("#,###");
     private final DAO_ThongKe daoThongKe = new DAO_ThongKe();
@@ -39,6 +43,9 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
     private final TabUI uiSanPham = new TabUI(TabType.SAN_PHAM);
     private final TabUI uiHoaDon  = new TabUI(TabType.HOA_DON);
     private final TabUI uiKhuyenMai = new TabUI(TabType.KHUYEN_MAI);
+
+    // Thêm UI cho tab mới: Thống kê hóa đơn chi tiết
+    private final TabUI uiHoaDonChiTiet = new TabUI(TabType.HOA_DON_CHI_TIET);
 
     private final int rowsPerPage = 10;
 
@@ -53,6 +60,8 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
         tabCon.addTab("Thống kê doanh thu sản phẩm", createTabSanPham(uiSanPham));
         tabCon.addTab("Thống kê hóa đơn theo nhân viên", createTabHoaDon(uiHoaDon));
+        // Tab mới thống kê hóa đơn chi tiết, dùng bảng giống TAB_ManHinhChinh
+        tabCon.addTab("Thống kê hóa đơn", createTabHoaDonChiTiet(uiHoaDonChiTiet));
         tabCon.addTab("Thống kê khuyến mãi hiện tại", createTabKhuyenMai(uiKhuyenMai));
 
         add(tabCon, BorderLayout.CENTER);
@@ -216,6 +225,95 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         return panel;
     }
 
+    // Tab mới: thống kê hóa đơn chi tiết (bảng hóa đơn, double-click mở PDF)
+    private JPanel createTabHoaDonChiTiet(TabUI ui) {
+        JPanel panel = new JPanel(new BorderLayout(10,10));
+        panel.setBackground(Color.WHITE);
+
+        JPanel pWest = createLeftOverview(ui);
+        JPanel pCenter = new JPanel(new BorderLayout(10,10));
+        pCenter.setBackground(Color.WHITE);
+
+        // Thanh tìm kiếm
+        JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        pSearch.setBackground(Color.WHITE);
+        JLabel lblTimKiem = new JLabel("Tìm kiếm:");
+        ui.txtTimKiem = new JTextField(20);
+        ui.btnTimKiem = new JButton("Tìm");
+        ui.btnTimKiem.setBackground(new Color(0, 90, 200));
+        ui.btnTimKiem.setForeground(Color.WHITE);
+        ui.btnTimKiem.setFocusPainted(false);
+        pSearch.add(lblTimKiem);
+        pSearch.add(ui.txtTimKiem);
+        pSearch.add(ui.btnTimKiem);
+        pCenter.add(pSearch, BorderLayout.NORTH);
+
+        // Bảng hóa đơn, thêm cột Nhân viên
+        ui.tableModel = new DefaultTableModel(new Object[][]{}, new String[]{
+                "Mã HĐ", "Khách hàng", "Nhân viên", "Ngày", "Tổng tiền"
+        }) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        ui.table = new JTable(ui.tableModel);
+        ui.table.setRowHeight(25);
+        ui.table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        ui.table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && ui.table.getSelectedRow() != -1) {
+                    String maHD = ui.table.getValueAt(ui.table.getSelectedRow(), 0).toString();
+                    openInvoicePDF(maHD);
+                }
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(ui.table);
+        TitledBorder border = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(0,90,200)),
+                "Danh sách hóa đơn"
+        );
+        TabStyler.applySectionTitleFont(border);
+        scroll.setBorder(border);
+        pCenter.add(scroll, BorderLayout.CENTER);
+
+        // Phân trang
+        JPanel pPage = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        ui.btnPrev = new JButton("< Trang trước");
+        ui.btnNext = new JButton("Trang sau >");
+        ui.lblPage = new JLabel("Trang 1 / 1");
+        pPage.add(ui.btnPrev);
+        pPage.add(ui.lblPage);
+        pPage.add(ui.btnNext);
+        pCenter.add(pPage, BorderLayout.SOUTH);
+
+        ui.btnPrev.addActionListener(e -> {
+            if (ui.currentPage > 1) {
+                ui.currentPage--;
+                performThongKe(uiHoaDonChiTiet, TabType.HOA_DON_CHI_TIET);
+            }
+        });
+        ui.btnNext.addActionListener(e -> {
+            Date tuNgay = uiHoaDonChiTiet.tuNgay.getDate();
+            Date denNgay = uiHoaDonChiTiet.denNgay.getDate();
+            if (tuNgay != null && denNgay != null) {
+                int total = daoThongKe.getTongSoHoaDon(tuNgay, denNgay);
+                int totalPage = (int) Math.ceil((double) total / rowsPerPage);
+                if (ui.currentPage < totalPage) {
+                    ui.currentPage++;
+                    performThongKe(uiHoaDonChiTiet, TabType.HOA_DON_CHI_TIET);
+                }
+            }
+        });
+
+        ui.btnTimKiem.addActionListener(e -> applyFilter(ui));
+        ui.txtTimKiem.addActionListener(e -> applyFilter(ui));
+
+        panel.add(pWest, BorderLayout.WEST);
+        panel.add(pCenter, BorderLayout.CENTER);
+        return panel;
+    }
+
     private JPanel createTabKhuyenMai(TabUI ui) {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
@@ -224,7 +322,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         JPanel pCenter = new JPanel(new BorderLayout(10, 10));
         pCenter.setBackground(Color.WHITE);
 
-        // Thanh tìm kiếm trên cùng (chuyển từ dưới lên trên)
+        // Thanh tìm kiếm trên cùng
         JPanel pSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         pSearch.setBackground(Color.WHITE);
         JLabel lblTimKiem = new JLabel("Tìm kiếm:");
@@ -312,9 +410,9 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
     // Hỏi người dùng muốn xuất những loại báo cáo nào, và chọn khoảng thời gian, rồi tạo 1 file với nhiều sheet
     private void exportMultiSheet() {
-        // Panel chọn loại báo cáo + khoảng thời gian
         JCheckBox cbSP = new JCheckBox("Doanh thu sản phẩm", true);
         JCheckBox cbNV = new JCheckBox("Hóa đơn theo nhân viên", true);
+        JCheckBox cbHDD = new JCheckBox("Thống kê hóa đơn", true);
         JCheckBox cbKM = new JCheckBox("Thống kê khuyến mãi", true);
 
         // Dùng khoảng thời gian hiện tại của tab sản phẩm làm giá trị mặc định
@@ -340,6 +438,7 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
 
         gbc.gridy++; panel.add(cbSP, gbc);
         gbc.gridy++; panel.add(cbNV, gbc);
+        gbc.gridy++; panel.add(cbHDD, gbc);
         gbc.gridy++; panel.add(cbKM, gbc);
 
         gbc.gridy++; gbc.gridwidth = 1;
@@ -351,18 +450,19 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         gbc.gridx = 1; panel.add(dcDenNgay, gbc);
 
         int option = JOptionPane.showConfirmDialog(
-            this,
-            panel,
-            "Xuất báo cáo",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.QUESTION_MESSAGE
+                this,
+                panel,
+                "Xuất báo cáo",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
         );
         if (option != JOptionPane.OK_OPTION) return;
 
         boolean exportSP = cbSP.isSelected();
         boolean exportNV = cbNV.isSelected();
+        boolean exportHDD = cbHDD.isSelected();
         boolean exportKM = cbKM.isSelected();
-        if (!exportSP && !exportNV && !exportKM) {
+        if (!exportSP && !exportNV && !exportHDD && !exportKM) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn ít nhất một loại báo cáo để xuất!");
             return;
         }
@@ -374,9 +474,9 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
             return;
         }
 
-        // Lấy dữ liệu thống kê đầy đủ cho khoảng thời gian đã chọn
         List<Object[]> dataSP = null;
         List<Object[]> dataNV = null;
+        List<Object[]> dataHDD = null;
         List<Object[]> dataKM = null;
 
         if (exportSP) {
@@ -385,15 +485,18 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         if (exportNV) {
             dataNV = daoThongKe.getTatCaThongKeNhanVien(tuNgay, denNgay);
         }
+        if (exportHDD) {
+            dataHDD = daoThongKe.getTatCaHoaDon(tuNgay, denNgay);
+        }
         if (exportKM) {
             dataKM = daoThongKe.getTatCaKhuyenMaiHienHanh(tuNgay, denNgay);
         }
 
-        // Nếu tất cả danh sách được chọn đều rỗng -> cảnh báo và không xuất
         boolean hasSP = exportSP && dataSP != null && !dataSP.isEmpty();
         boolean hasNV = exportNV && dataNV != null && !dataNV.isEmpty();
+        boolean hasHDD = exportHDD && dataHDD != null && !dataHDD.isEmpty();
         boolean hasKM = exportKM && dataKM != null && !dataKM.isEmpty();
-        if (!hasSP && !hasNV && !hasKM) {
+        if (!hasSP && !hasNV && !hasHDD && !hasKM) {
             JOptionPane.showMessageDialog(this, "Không có dữ liệu nào trong khoảng thời gian đã chọn để xuất!");
             return;
         }
@@ -454,6 +557,27 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
                 for (int i = 0; i < 4; i++) sheetNV.autoSizeColumn(i);
             }
 
+            if (hasHDD) {
+                Sheet sheetHDD = workbook.createSheet("ThongKeHoaDon");
+                Row headerHDD = sheetHDD.createRow(0);
+                headerHDD.createCell(0).setCellValue("Mã HĐ");
+                headerHDD.createCell(1).setCellValue("Khách hàng");
+                headerHDD.createCell(2).setCellValue("Nhân viên");
+                headerHDD.createCell(3).setCellValue("Ngày");
+                headerHDD.createCell(4).setCellValue("Tổng tiền");
+                int rowIdxHDD = 1;
+                SimpleDateFormat sdfDate = new SimpleDateFormat("dd/MM/yyyy");
+                for (Object[] row : dataHDD) {
+                    Row r = sheetHDD.createRow(rowIdxHDD++);
+                    r.createCell(0).setCellValue(row[0].toString());
+                    r.createCell(1).setCellValue(row[1] != null ? row[1].toString() : "");
+                    r.createCell(2).setCellValue(row[2] != null ? row[2].toString() : "");
+                    r.createCell(3).setCellValue(row[3] != null ? sdfDate.format((Date)row[3]) : "");
+                    r.createCell(4).setCellValue(((Number)row[4]).doubleValue());
+                }
+                for (int i = 0; i < 5; i++) sheetHDD.autoSizeColumn(i);
+            }
+
             if (hasKM) {
                 Sheet sheetKM = workbook.createSheet("KhuyenMaiHienHanh");
                 Row header = sheetKM.createRow(0);
@@ -501,8 +625,10 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         } else if (o == uiKhuyenMai.btnThongKe) {
             uiKhuyenMai.currentPage = 1;
             performThongKe(uiKhuyenMai, TabType.KHUYEN_MAI);
-        } else if (o == uiSanPham.btnXuat || o == uiHoaDon.btnXuat || o == uiKhuyenMai.btnXuat) {
-            // Dù bấm Xuất ở tab nào cũng dùng chung một hộp thoại chọn báo cáo
+        } else if (o == uiHoaDonChiTiet.btnThongKe) {
+            uiHoaDonChiTiet.currentPage = 1;
+            performThongKe(uiHoaDonChiTiet, TabType.HOA_DON_CHI_TIET);
+        } else if (o == uiSanPham.btnXuat || o == uiHoaDon.btnXuat || o == uiKhuyenMai.btnXuat || o == uiHoaDonChiTiet.btnXuat) {
             exportMultiSheet();
         }
     }
@@ -562,6 +688,23 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
                 });
             }
             int total = daoThongKe.getTongSoKhuyenMaiHienHanh(tuNgay, denNgay);
+            int totalPage = (total == 0) ? 1 : (int) Math.ceil((double) total / rowsPerPage);
+            ui.lblPage.setText("Trang " + ui.currentPage + " / " + totalPage);
+            ui.btnPrev.setEnabled(ui.currentPage > 1);
+            ui.btnNext.setEnabled(ui.currentPage < totalPage);
+        } else if (type == TabType.HOA_DON_CHI_TIET) {
+            List<Object[]> list = daoThongKe.getHoaDonTheoTrang(ui.currentPage, rowsPerPage, tuNgay, denNgay);
+            ui.tableModel.setRowCount(0);
+            for (Object[] row : list) {
+                ui.tableModel.addRow(new Object[]{
+                        row[0],               // Mã HĐ
+                        row[1],               // Khách hàng
+                        row[2],               // Nhân viên
+                        formatDate((Date)row[3]), // Ngày
+                        moneyFormat.format(((Number)row[4]).doubleValue()) // Tổng tiền
+                });
+            }
+            int total = daoThongKe.getTongSoHoaDon(tuNgay, denNgay);
             int totalPage = (total == 0) ? 1 : (int) Math.ceil((double) total / rowsPerPage);
             ui.lblPage.setText("Trang " + ui.currentPage + " / " + totalPage);
             ui.btnPrev.setEnabled(ui.currentPage > 1);
@@ -631,5 +774,23 @@ public class TAB_ThongKe extends JPanel implements ActionListener {
         TabUI(TabType type) { this.type = type; }
     }
 
-    private enum TabType { SAN_PHAM, HOA_DON, KHUYEN_MAI }
+    private enum TabType { SAN_PHAM, HOA_DON, KHUYEN_MAI, HOA_DON_CHI_TIET }
+
+    // Mở file PDF hóa đơn theo mã, dùng chung quy ước với TAB_ManHinhChinh
+    private void openInvoicePDF(String maHoaDon) {
+        String path = "HoaDon/HD_" + maHoaDon + ".pdf";
+        File f = new File(path);
+        if (!f.exists()) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy file: " + f.getAbsolutePath());
+            return;
+        }
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(f);
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Không thể mở file hóa đơn: " + ex.getMessage());
+        }
+    }
 }
