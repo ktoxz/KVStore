@@ -106,7 +106,7 @@ public class TAB_BanHang extends JPanel {
         JPanel pSearch = new JPanel(new BorderLayout(8, 8));
         pSearch.setBackground(Color.WHITE);
         JTextField txtSearch = new JTextField();
-        txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtSearch.setFont(TabStyler.CONTENT_FONT);
         txtSearch.setToolTipText("Nhập tên sản phẩm...");
         // Placeholder init
         applyPlaceholderBehavior(txtSearch);
@@ -286,10 +286,10 @@ public class TAB_BanHang extends JPanel {
         table.setGridColor(new Color(230,230,230));
 
         // Tăng chiều cao dòng để hiển thị 2 dòng (giá gốc + giá sau KM) không bị cắt chữ
-        int baseH = table.getFontMetrics(new Font("Segoe UI", Font.PLAIN, 14)).getHeight();
+        int baseH = table.getFontMetrics(TabStyler.CONTENT_FONT).getHeight();
         table.setRowHeight(baseH * 2 + 8);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setFont(TabStyler.CONTENT_FONT);
+        table.getTableHeader().setFont(TabStyler.CONTENT_FONT);
         table.getTableHeader().setReorderingAllowed(false);
 
         // Điều chỉnh độ rộng các cột cho gọn gàng
@@ -745,11 +745,11 @@ public class TAB_BanHang extends JPanel {
                 JOptionPane.showMessageDialog(this, "Tiền khách trả chưa đủ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
-            // Nếu chọn chuyển khoản thì hiển thị mã QR Momo trước
             if (rbBank.isSelected()) {
-                showMomoDialog();
+                double soTien = getTongCong() - tienGiamTuDiem;
+                showVietQRDialog(soTien);
             }
+
 
             // Xử lý thanh toán thành công
             int confirm = JOptionPane.showConfirmDialog(this,
@@ -1500,52 +1500,54 @@ public class TAB_BanHang extends JPanel {
         }
     }
 
-    // Hiển thị dialog mã QR Momo khi thanh toán chuyển khoản
-    private void showMomoDialog() {
+
+    private void showVietQRDialog(double amount) {
         try {
-            java.net.URL imgUrl = getClass().getResource("/momo.jpg");
-            if (imgUrl == null) {
-                JOptionPane.showMessageDialog(this,
-                        "Không tìm thấy ảnh momo.jpg trong resources!",
-                        "Lỗi",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            String stk = "7370437963";
+            String info = java.net.URLEncoder.encode("Thanh toan tai quay", "UTF-8");
 
-            ImageIcon originalIcon = new ImageIcon(imgUrl);
-            // Scale ảnh vừa với dialog, ví dụ chiều rộng tối đa 350px
-            int maxWidth = 350;
-            int width = originalIcon.getIconWidth();
-            int height = originalIcon.getIconHeight();
-            if (width > maxWidth) {
-                double ratio = (double) maxWidth / width;
-                width = maxWidth;
-                height = (int) (height * ratio);
-            }
-            Image scaled = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-            ImageIcon scaledIcon = new ImageIcon(scaled);
+            // URL VietQR
+            String qrURL = "https://img.vietqr.io/image/bidv-" + stk +
+                    "-compact2.png?amount=" + (long) amount + "&addInfo=" + info;
 
-            JLabel lbl = new JLabel(scaledIcon);
-            lbl.setHorizontalAlignment(SwingConstants.CENTER);
+            // Load ảnh QR từ URL
+            java.net.URL url = new java.net.URL(qrURL);
+            ImageIcon icon = new ImageIcon(url);
+            int w = 540;
+            int h = 640;
+            Image img = icon.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+            ImageIcon scaled = new ImageIcon(img);
 
-            JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Thanh toán qua Momo", Dialog.ModalityType.APPLICATION_MODAL);
-            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-            dialog.getContentPane().setLayout(new BorderLayout(10, 10));
-            dialog.getContentPane().add(lbl, BorderLayout.CENTER);
+            JLabel lblQR = new JLabel(scaled);
+            lblQR.setHorizontalAlignment(SwingConstants.CENTER);
 
-            JLabel note = new JLabel("Vui lòng quét mã để chuyển khoản, sau đó nhấn Xác nhận để hoàn tất.");
-            note.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-            dialog.getContentPane().add(note, BorderLayout.SOUTH);
+            // ===== Dialog =====
+            JDialog dialog = new JDialog(
+                    (Frame) SwingUtilities.getWindowAncestor(this),
+                    "Thanh toán qua VietQR (BIDV)", true
+            );
+            dialog.setLayout(new BorderLayout(20, 20));
+            dialog.getRootPane().setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-            dialog.pack();
+            dialog.add(lblQR, BorderLayout.CENTER);
+
+            JLabel note = new JLabel("<html><div style='text-align:center;'>"
+                    + "Quét mã VietQR để thanh toán<br>"
+                    + "<b>Số tiền: " + (long) amount + "đ</b></div></html>");
+
+            note.setHorizontalAlignment(SwingConstants.CENTER);
+            note.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+            dialog.add(note, BorderLayout.SOUTH);
+            dialog.setResizable(false);
             dialog.setLocationRelativeTo(this);
             dialog.setVisible(true);
+
         } catch (Exception ex) {
-            ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
-                    "Không thể hiển thị ảnh Momo:\n" + ex.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Không thể tạo mã VietQR!\n" + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+
 }

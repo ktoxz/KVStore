@@ -18,8 +18,8 @@ public final class TabStyler {
     private static final String HEADER_PROPERTY = "tabHeader";
 
     public static final Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 26);
-    public static final Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    public static final Font CONTENT_FONT = new Font("Segoe UI", Font.PLAIN, 14);
+    public static final Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 20);
+    public static final Font CONTENT_FONT = new Font("Segoe UI", Font.PLAIN, 16);
 
     private static final Color HEADER_COLOR = new Color(0, 90, 200);
 

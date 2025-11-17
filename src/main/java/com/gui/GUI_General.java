@@ -2,6 +2,7 @@ package com.gui;
 
 import com.entity.NhanVien;
 import com.enums.ChucVu;
+import com.service.TabStyler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -57,7 +58,7 @@ public class GUI_General extends JPanel {
 
         // ===== App name =====
         JLabel lblAppName = new JLabel("KVStore - Hệ thống quản lý cửa hàng");
-        lblAppName.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblAppName.setFont(TabStyler.HEADER_FONT);
         lblAppName.setForeground(Color.WHITE);
         headerPanel.add(lblAppName, BorderLayout.WEST);
 
@@ -72,11 +73,11 @@ public class GUI_General extends JPanel {
 
         JLabel lblHello = new JLabel("Xin chào, " + ten + (chucVu.isEmpty() ? "" : " (" + chucVu + ")"));
         lblHello.setForeground(Color.WHITE);
-        lblHello.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblHello.setFont(TabStyler.CONTENT_FONT);
 
         // Nút đăng xuất
         JButton btnLogout = new JButton("Đăng xuất");
-        btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnLogout.setFont(TabStyler.CONTENT_FONT);
         btnLogout.setBackground(Color.WHITE);
         btnLogout.setForeground(new Color(0, 122, 255));
         btnLogout.setFocusPainted(false);
@@ -119,6 +120,7 @@ public class GUI_General extends JPanel {
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
         // ======== TAB CHUNG CHO MỌI NHÂN VIÊN ========
+        sidebarPanel.add(createSideTitle("Quản lý bán hàng"));
         addTabButton(sidebarPanel, "Màn hình chính", "src/main/resources/icons/home.png", tabManHinhChinh);
         addTabButton(sidebarPanel, "Bán hàng", "src/main/resources/icons/shopping-cart.png", tabBanHang);
         addTabButton(sidebarPanel, "Khách hàng", "src/main/resources/icons/user.png", tabKhachHang);
@@ -127,13 +129,7 @@ public class GUI_General extends JPanel {
 
         // ======== TAB CHỈ CHO QUẢN LÝ ========
         if (nhanVien.getChucVu() == ChucVu.QUANLY) {
-
-            // --- Header "Quản trị" ---
-            JLabel lblAdmin = new JLabel("   Quản trị");
-            lblAdmin.setFont(new Font("Segoe UI", Font.BOLD, 14));
-            lblAdmin.setForeground(new Color(80, 80, 80));
-            lblAdmin.setBorder(BorderFactory.createEmptyBorder(15, 10, 5, 0));
-            sidebarPanel.add(lblAdmin);
+            sidebarPanel.add(createSideTitle("Quản trị"));
             addTabButton(sidebarPanel, "Sản phẩm", "src/main/resources/icons/boxes.png", tabSanPham);
             addTabButton(sidebarPanel, "Nhân Viên", "src/main/resources/icons/team.png", tabNhanVien);
             addTabButton(sidebarPanel, "Khuyến mãi", "src/main/resources/icons/megaphone.png", tabKhuyenMai);
@@ -141,6 +137,13 @@ public class GUI_General extends JPanel {
         sidebarPanel.add(Box.createVerticalGlue());
     }
 
+    private JLabel createSideTitle(String title) {
+        JLabel lbl = new JLabel("   "+title);
+        lbl.setFont(TabStyler.SECTION_FONT);
+        lbl.setForeground(new Color(80, 80, 80));
+        lbl.setBorder(BorderFactory.createEmptyBorder(15, 10, 5, 0));
+        return lbl;
+    }
 
 
     private void addTabButton(JPanel sidebarPanel, String title, String icon, JPanel targetPanel) {
@@ -163,7 +166,7 @@ public class GUI_General extends JPanel {
             button.setText(text); // fallback
         }
 
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        button.setFont(TabStyler.CONTENT_FONT);
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setMaximumSize(new Dimension(250, 50));
         button.setPreferredSize(new Dimension(250, 50));
@@ -206,26 +209,6 @@ public class GUI_General extends JPanel {
         contentPanel.add(currentTabPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
-    }
-
-    // Phương thức để thêm tab tùy chỉnh từ bên ngoài
-    public void addCustomTab(String title, String icon, JPanel panel) {
-        // Tìm sidebar panel
-        Component[] components = getComponents();
-        for (Component comp : components) {
-            if (comp instanceof JPanel) {
-                JPanel checkPanel = (JPanel) comp;
-                if (checkPanel.getLayout() instanceof BoxLayout) {
-                    JButton btnNewTab = createTabButton(title, icon);
-                    btnNewTab.addActionListener(e -> showTab(panel));
-                    checkPanel.add(btnNewTab);
-                    checkPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-                    checkPanel.revalidate();
-                    checkPanel.repaint();
-                    break;
-                }
-            }
-        }
     }
 
 

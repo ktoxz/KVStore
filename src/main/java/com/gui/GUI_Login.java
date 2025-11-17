@@ -2,6 +2,7 @@ package com.gui;
 
 import com.dao.DAO_NhanVien;
 import com.entity.NhanVien;
+import com.service.TabStyler;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -43,7 +44,7 @@ public class GUI_Login extends JPanel {
         gc.anchor = GridBagConstraints.WEST;
 
         JLabel lblTitle = new JLabel("Đăng nhập");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        lblTitle.setFont(TabStyler.HEADER_FONT);
 
         JLabel lblUser = new JLabel("Username");
         txtUsername = new JTextField(22);
@@ -52,16 +53,13 @@ public class GUI_Login extends JPanel {
         txtPassword = new JPasswordField(22);
 
         btnLogin = new JButton("Đăng nhập");
-        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnLogin.setFont(TabStyler.SECTION_FONT);
         btnLogin.setBackground(new Color(0, 122, 255));
         btnLogin.setForeground(Color.WHITE);
         btnLogin.setFocusPainted(false);
         btnLogin.setPreferredSize(new Dimension(140, 38));
         btnLogin.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        lblForgot = new JLabel("<html><u>Quên mật khẩu?</u></html>");
-        lblForgot.setForeground(new Color(0, 122, 255));
-        lblForgot.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         txtPassword.addActionListener(e -> btnLogin.doClick());
 
@@ -74,8 +72,6 @@ public class GUI_Login extends JPanel {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         row.setBackground(Color.WHITE);
         row.add(btnLogin);
-        row.add(Box.createHorizontalStrut(12));
-        row.add(lblForgot);
 
         gc.gridy++;
         right.add(row, gc);
