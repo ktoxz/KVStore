@@ -2,7 +2,7 @@
 package com.service;
 
 import com.entity.HoaDon;
-import com.entity.CT_HoaDon;
+import com.entity.ChiTietHoaDon;
 import com.entity.KhachHang;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 import com.lowagie.text.pdf.BaseFont;
@@ -93,7 +93,7 @@ public class PDFExportService {
 
         // Tính toán các giá trị
         double tongTien = 0;
-        for (CT_HoaDon ct : hoaDon.getChiTietList()) {
+        for (ChiTietHoaDon ct : hoaDon.getChiTietList()) {
             tongTien += ct.getThanhTien();
         }
 
@@ -171,7 +171,7 @@ public class PDFExportService {
         html.append("<tbody>");
 
         int stt = 1;
-        for (CT_HoaDon ct : hoaDon.getChiTietList()) {
+        for (ChiTietHoaDon ct : hoaDon.getChiTietList()) {
             double donGiaSau = ct.getThanhTien(); // giá sau khuyến mãi (đã lưu)
             double donGiaGoc = (ct.getSanPham() != null ? ct.getSanPham().getGiaSP() : donGiaSau);
             int sl = ct.getSoLuong();

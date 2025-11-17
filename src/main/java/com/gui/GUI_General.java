@@ -136,7 +136,7 @@ public class GUI_General extends JPanel {
         }
         sidebarPanel.add(Box.createVerticalGlue());
     }
-
+    
     private JLabel createSideTitle(String title) {
         JLabel lbl = new JLabel("   "+title);
         lbl.setFont(TabStyler.SECTION_FONT);

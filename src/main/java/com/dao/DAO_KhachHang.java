@@ -230,7 +230,7 @@ public class DAO_KhachHang {
 						rs.getBoolean(3),         // gioiTinh
 						rs.getString(4),          // sdt
 						rs.getDate(5).toLocalDate(), // ngayTaoTK
-						rs.getInt(6)              // diemTichLuy
+					 rs.getInt(6)              // diemTichLuy
 				);
 			}
 		} catch (SQLException e) {
@@ -332,4 +332,80 @@ public class DAO_KhachHang {
 		}
 		return n > 0;
 	}
+
+	// Đếm khách hàng theo keyword (tìm theo mã, tên, hoặc SĐT). Keyword rỗng => đếm tất cả
+    public int countKhachHangByKeyword(String keyword) {
+        int tong = 0;
+        String kw = keyword == null ? "" : keyword.trim();
+        try {
+            ConnectDB.getInstance();
+            Connection con = ConnectDB.getCon();
+
+            StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM KhachHang");
+            if (!kw.isEmpty()) {
+                sql.append(" WHERE maKH LIKE ? OR tenKH LIKE ? OR sdt LIKE ?");
+            }
+
+            PreparedStatement ps = con.prepareStatement(sql.toString());
+            if (!kw.isEmpty()) {
+                String pattern = "%" + kw + "%";
+                ps.setString(1, pattern);
+                ps.setString(2, pattern);
+                ps.setString(3, pattern);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                tong = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return tong;
+    }
+
+    // Phân trang theo keyword (tìm theo mã, tên, hoặc SĐT). Keyword rỗng => lấy tất cả
+    public ArrayList<KhachHang> getKhachHangTheoTrang(String keyword, int page, int size) {
+        ArrayList<KhachHang> dskh = new ArrayList<>();
+        String kw = keyword == null ? "" : keyword.trim();
+        try {
+            ConnectDB.getInstance();
+            Connection con = ConnectDB.getCon();
+
+            StringBuilder sql = new StringBuilder(
+                "SELECT * FROM KhachHang"
+            );
+            if (!kw.isEmpty()) {
+                sql.append(" WHERE maKH LIKE ? OR tenKH LIKE ? OR sdt LIKE ?");
+            }
+            sql.append(" ORDER BY maKH OFFSET (? - 1) * ? ROWS FETCH NEXT ? ROWS ONLY");
+
+            PreparedStatement ps = con.prepareStatement(sql.toString());
+            int idx = 1;
+            if (!kw.isEmpty()) {
+                String pattern = "%" + kw + "%";
+                ps.setString(idx++, pattern);
+                ps.setString(idx++, pattern);
+                ps.setString(idx++, pattern);
+            }
+            ps.setInt(idx++, page);
+            ps.setInt(idx++, size);
+            ps.setInt(idx, size);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                String maKH = rs.getString("maKH");
+                String tenKH = rs.getString("tenKH");
+                boolean gioiTinh = rs.getBoolean("gioiTinh");
+                String sdt = rs.getString("sdt");
+                LocalDate ngayTao = rs.getDate("ngayTaoTK").toLocalDate();
+                int diemTichLuy = rs.getInt("diemTichLuy");
+                KhachHang kh = new KhachHang(maKH, tenKH, gioiTinh, sdt, ngayTao, diemTichLuy);
+                dskh.add(kh);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return dskh;
+    }
 }

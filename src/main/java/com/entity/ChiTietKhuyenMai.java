@@ -2,13 +2,13 @@ package com.entity;
 
 import com.enums.LoaiKM;
 
-public class CT_KhuyenMai {
+public class ChiTietKhuyenMai {
     private KhuyenMai khuyenMai;
     private SanPham sanPham;
     private double giaTri;     // % hoặc số tiền giảm
     private LoaiKM loaiKM;     // Enum thay vì String
 
-    public CT_KhuyenMai(KhuyenMai khuyenMai, SanPham sanPham, double giaTri, LoaiKM loaiKM) {
+    public ChiTietKhuyenMai(KhuyenMai khuyenMai, SanPham sanPham, double giaTri, LoaiKM loaiKM) {
         this.khuyenMai = khuyenMai;
         this.sanPham = sanPham;
         this.giaTri = giaTri;

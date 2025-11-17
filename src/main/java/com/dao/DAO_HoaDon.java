@@ -99,12 +99,12 @@ public class DAO_HoaDon {
 
             stmtCT = con.prepareStatement(sqlCT);
 
-            DAO_CT_KhuyenMai daoCTKM = new DAO_CT_KhuyenMai();
+            DAO_ChiTietKhuyenMai daoCTKM = new DAO_ChiTietKhuyenMai();
 
-            for (CT_HoaDon ct : hoaDon.getChiTietList()) {
+            for (ChiTietHoaDon ct : hoaDon.getChiTietList()) {
 
                 // tìm KM tối ưu
-                CT_KhuyenMai ctkm = daoCTKM.findBestForProduct(ct.getSanPham().getMaSP());
+                ChiTietKhuyenMai ctkm = daoCTKM.findBestForProduct(ct.getSanPham().getMaSP());
 //                KhuyenMai km = daoCTKM.findBestForProduct(ct.getSanPham().getMaSP());
 
 
@@ -240,8 +240,8 @@ public class DAO_HoaDon {
     /**
      * Load danh sách chi tiết cho một hóa đơn.
      */
-    public List<CT_HoaDon> loadChiTietHoaDon(String maHoaDon) {
-        List<CT_HoaDon> list = new ArrayList<>();
+    public List<ChiTietHoaDon> loadChiTietHoaDon(String maHoaDon) {
+        List<ChiTietHoaDon> list = new ArrayList<>();
         ConnectDB.getInstance();
         Connection con = ConnectDB.getCon();
         String sql = "SELECT ct.maSP, ct.soLuong, ct.thanhTien " +
@@ -256,7 +256,7 @@ public class DAO_HoaDon {
                 double thanhTien = rs.getDouble("thanhTien");
                 SanPham sp = daoSP.findById(maSP);
                 HoaDon hd = getHoaDon(maHoaDon);
-                CT_HoaDon ct = new CT_HoaDon(hd, sp, soLuong, null, thanhTien);
+                ChiTietHoaDon ct = new ChiTietHoaDon(hd, sp, soLuong, null, thanhTien);
                 list.add(ct);
             }
             rs.close();

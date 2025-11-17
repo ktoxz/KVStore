@@ -327,7 +327,7 @@ public class TAB_ManHinhChinh extends JPanel {
         if (kmCurrentPage > maxPage) kmCurrentPage = maxPage;
 
         for (SanPham sp : list) {
-            CT_KhuyenMai km = new DAO_CT_KhuyenMai().findBestForProduct(sp.getMaSP());
+            ChiTietKhuyenMai km = new DAO_ChiTietKhuyenMai().findBestForProduct(sp.getMaSP());
             double gia = sp.getGiaSP();
             double kmGia = gia;
 

@@ -1,9 +1,9 @@
 package com.gui;
 
 import com.dao.DAO_KhuyenMai;
-import com.dao.DAO_CT_KhuyenMai;
+import com.dao.DAO_ChiTietKhuyenMai;
 import com.dao.DAO_SanPham;
-import com.entity.CT_KhuyenMai;
+import com.entity.ChiTietKhuyenMai;
 import com.entity.KhuyenMai;
 import com.entity.SanPham;
 import com.enums.LoaiKM;
@@ -50,7 +50,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
 
     // DAO
     private final DAO_KhuyenMai daoKM = new DAO_KhuyenMai();
-    private final DAO_CT_KhuyenMai daoCT = new DAO_CT_KhuyenMai();
+    private final DAO_ChiTietKhuyenMai daoCT = new DAO_ChiTietKhuyenMai();
     private final DAO_SanPham daoSP = new DAO_SanPham();
 
     // ==== Chuẩn hóa Màu sắc & Style ====
@@ -133,7 +133,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
     // Phân trang CT
     private int ctCurrentPage = 1;
     private int ctTotalPages = 1;
-    private List<CT_KhuyenMai> ctFullList = Collections.emptyList(); // Cache
+    private List<ChiTietKhuyenMai> ctFullList = Collections.emptyList(); // Cache
     private JButton btnCtFirst, btnCtPrev, btnCtNext, btnCtLast;
     private JLabel lbCtPageStatus;
     private JPanel ctPageButtonsPanel; // Panel chứa các nút số trang động
@@ -659,9 +659,9 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         }
     }
 
-    private void populateTableCT(List<CT_KhuyenMai> ds) {
+    private void populateTableCT(List<ChiTietKhuyenMai> ds) {
         mdlCT.setRowCount(0);
-        for (CT_KhuyenMai ct : ds) {
+        for (ChiTietKhuyenMai ct : ds) {
             mdlCT.addRow(new Object[]{
                     ct.getSanPham().getMaSP(),
                     ct.getLoaiKM().toString(), 
@@ -697,7 +697,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         int startIndex = (ctCurrentPage - 1) * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, totalRows);
 
-        List<CT_KhuyenMai> pageData = (totalRows > 0) ? ctFullList.subList(startIndex, endIndex) : Collections.emptyList();
+        List<ChiTietKhuyenMai> pageData = (totalRows > 0) ? ctFullList.subList(startIndex, endIndex) : Collections.emptyList();
         populateTableCT(pageData);
         updateCtPaginationControls();
     }
@@ -752,9 +752,9 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         
         // ctCurrentPage = 1; // Đã reset trong handleClickTableKM
 
-        new SwingWorker<List<CT_KhuyenMai>, Void>() {
+        new SwingWorker<List<ChiTietKhuyenMai>, Void>() {
             @Override
-            protected List<CT_KhuyenMai> doInBackground() throws Exception {
+            protected List<ChiTietKhuyenMai> doInBackground() throws Exception {
                 return daoCT.findByMaKM(maKM);
             }
 
@@ -1023,7 +1023,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             return;
         }
 
-        CT_KhuyenMai ctMoi;
+        ChiTietKhuyenMai ctMoi;
         int kmID;
         try {
             ctMoi = collectCT();
@@ -1106,7 +1106,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         }
         if (!validCT(true)) return;
         
-        CT_KhuyenMai ctSua;
+        ChiTietKhuyenMai ctSua;
         int kmID;
         
         try {
@@ -1258,7 +1258,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
             int fullListIndex = (ctCurrentPage - 1) * PAGE_SIZE + modelRow;
             if (fullListIndex >= ctFullList.size()) return;
             
-            CT_KhuyenMai ct = ctFullList.get(fullListIndex);
+            ChiTietKhuyenMai ct = ctFullList.get(fullListIndex);
             
             txtCT_MaSP.setText(ct.getSanPham().getMaSP());
             cbCT_LoaiKM.setSelectedItem(ct.getLoaiKM().toString());
@@ -1358,7 +1358,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         );
     }
     
-    private CT_KhuyenMai collectCT() {
+    private ChiTietKhuyenMai collectCT() {
         int kmID = Integer.parseInt(txtCT_MaKM.getText().trim());
         String spID = txtCT_MaSP.getText().trim();
         double tiLe = Double.parseDouble(txtCT_TiLe.getText().trim());
@@ -1371,7 +1371,7 @@ public class TAB_KhuyenMai extends JPanel implements ActionListener, MouseListen
         km.setMaKM(kmID);
         SanPham sp = new SanPham(loaiKM_Str, loaiKM_Str, tiLe); 
         sp.setMaSP(spID);
-        return new CT_KhuyenMai(km, sp, tiLe, loaiKM_Enum);
+        return new ChiTietKhuyenMai(km, sp, tiLe, loaiKM_Enum);
     }
 
     // =================================================================

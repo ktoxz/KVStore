@@ -335,7 +335,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
     private void loadPage(int page) {
         String keyword = txtSearch.getText().trim();
 
-        int totalRecords = dao.getTongSoKhachHang();
+        int totalRecords = dao.countKhachHangByKeyword(keyword);
         totalPages = (int) Math.ceil(totalRecords / (double) pageSize);
         if (totalPages == 0) totalPages = 1;
 
@@ -344,7 +344,7 @@ public class TAB_KhachHang extends JPanel implements ActionListener, MouseListen
         if (page > totalPages) page = totalPages;
         currentPage = page;
 
-        List<KhachHang> ds = dao.getKhachHangTheoTrang(currentPage, pageSize);
+        List<KhachHang> ds = dao.getKhachHangTheoTrang(keyword, currentPage, pageSize);
 
         mdl.setRowCount(0);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");

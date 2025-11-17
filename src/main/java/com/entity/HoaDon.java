@@ -1,6 +1,6 @@
 package com.entity;
 
-import com.dao.DAO_CT_KhuyenMai;
+import com.dao.DAO_ChiTietKhuyenMai;
 import com.dao.DAO_HoaDon;
 import com.dao.DAO_KhachHang;
 import com.dao.DAO_KhuyenMai;
@@ -18,7 +18,7 @@ public class HoaDon {
     private NhanVien nhanVien;
 
     // Danh sách chi tiết hóa đơn
-    private List<CT_HoaDon> chiTietList = new ArrayList<>();
+    private List<ChiTietHoaDon> chiTietList = new ArrayList<>();
 
     public HoaDon() {
     }
@@ -86,13 +86,13 @@ public class HoaDon {
         this.nhanVien = nhanVien;
     }
 
-    public List<CT_HoaDon> getChiTietList() {
+    public List<ChiTietHoaDon> getChiTietList() {
         DAO_HoaDon daoHoaDon = new DAO_HoaDon();
         if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
         return chiTietList;
     }
 
-    public void setChiTietList(List<CT_HoaDon> chiTietList) {
+    public void setChiTietList(List<ChiTietHoaDon> chiTietList) {
         DAO_HoaDon daoHoaDon = new DAO_HoaDon();
         if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
         this.chiTietList = chiTietList;
@@ -102,13 +102,13 @@ public class HoaDon {
         DAO_HoaDon daoHoaDon = new DAO_HoaDon();
         if(chiTietList.isEmpty()) chiTietList = daoHoaDon.loadChiTietHoaDon(maHoaDon);
         double tong = 0;
-        for (CT_HoaDon ct : getChiTietList()) {
+        for (ChiTietHoaDon ct : getChiTietList()) {
             tong += ct.getThanhTien();
         }
         return tong;
     }
 
-    public void addChiTiet(CT_HoaDon chiTiet) {
+    public void addChiTiet(ChiTietHoaDon chiTiet) {
         this.chiTietList.add(chiTiet);
     }
 

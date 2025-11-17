@@ -1,16 +1,11 @@
 package com;
 
 import com.connectDB.ConnectDB;
-import com.dao.DAO_CT_KhuyenMai;
-import com.dao.DAO_SanPham;
-import com.entity.CT_KhuyenMai;
-import com.entity.SanPham;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.gui.GUI_Login;
 
 import javax.swing.*;
 import java.sql.SQLException;
-import java.util.List;
 
 public class Main {
     public static void main(String[] args) {

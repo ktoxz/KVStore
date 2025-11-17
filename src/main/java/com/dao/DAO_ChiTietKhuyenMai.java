@@ -1,7 +1,7 @@
 package com.dao;
 
 import com.connectDB.ConnectDB;
-import com.entity.CT_KhuyenMai;
+import com.entity.ChiTietKhuyenMai;
 import com.entity.KhuyenMai;
 import com.entity.SanPham;
 import com.enums.LoaiKM; 
@@ -11,14 +11,14 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DAO_CT_KhuyenMai {
+public class DAO_ChiTietKhuyenMai {
     
     private final DAO_SanPham daoSanPham = new DAO_SanPham();
 
     // ====================== TRUY VẤN CƠ BẢN ======================
 
-    public List<CT_KhuyenMai> findByMaKM(int maKM) {
-        List<CT_KhuyenMai> list = new ArrayList<>();
+    public List<ChiTietKhuyenMai> findByMaKM(int maKM) {
+        List<ChiTietKhuyenMai> list = new ArrayList<>();
         // ✅ SỬA LỖI SQL: sp.maSP (thay vì sp.ma)
         String sql = """
             SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
@@ -49,7 +49,7 @@ public class DAO_CT_KhuyenMai {
                             "", "", true, "" // Giả định
                     );
 
-                    CT_KhuyenMai ct = new CT_KhuyenMai(
+                    ChiTietKhuyenMai ct = new ChiTietKhuyenMai(
                             km,
                             sp,
                             rs.getDouble("tiLe"), 
@@ -64,7 +64,7 @@ public class DAO_CT_KhuyenMai {
         return list;
     }
 
-    public CT_KhuyenMai findOne(int maKM, String maSP, String loaiKM) {
+    public ChiTietKhuyenMai findOne(int maKM, String maSP, String loaiKM) {
         // ✅ SỬA LỖI SQL: sp.maSP (thay vì sp.ma)
         String sql = """
             SELECT ct.maKM, ct.maSP, ct.tiLe, ct.loaiKM,
@@ -95,7 +95,7 @@ public class DAO_CT_KhuyenMai {
                             rs.getDouble("giaSP")
                     );
 
-                    return new CT_KhuyenMai(
+                    return new ChiTietKhuyenMai(
                             km,
                             sp,
                             rs.getDouble("tiLe"), 
@@ -114,7 +114,7 @@ public class DAO_CT_KhuyenMai {
  // Trong: com/dao/DAO_CT_KhuyenMai.java
  // Trong: com/dao/DAO_CT_KhuyenMai.java
 
-    public boolean insert(CT_KhuyenMai ct) {
+    public boolean insert(ChiTietKhuyenMai ct) {
         String sql = "INSERT INTO CT_KhuyenMai(maKM, maSP, tiLe, loaiKM) VALUES(?,?,?,?)";
         Connection con = ConnectDB.getInstance().getCon();
         if (con == null) return false;
@@ -134,7 +134,7 @@ public class DAO_CT_KhuyenMai {
         }
     }
 
-    public boolean update(CT_KhuyenMai ct) {
+    public boolean update(ChiTietKhuyenMai ct) {
         String sql = "UPDATE CT_KhuyenMai SET tiLe=? WHERE maKM=? AND maSP=? AND loaiKM=?";
         Connection con = ConnectDB.getInstance().getCon();
         if (con == null) return false;
@@ -185,7 +185,7 @@ public class DAO_CT_KhuyenMai {
 
     // ====================== TRUY VẤN NÂNG CAO (Hàm Main.java cần) ======================
 
-    public List<CT_KhuyenMai> findBySanPham(String maSP) {
+    public List<ChiTietKhuyenMai> findBySanPham(String maSP) {
         String sql = """
             SELECT ctkm.maKM, ctkm.maSP, ctkm.tiLe, ctkm.loaiKM,
                    km.tenKM, km.moTaKM, km.ngayBatDau, km.ngayKetThuc
@@ -196,7 +196,7 @@ public class DAO_CT_KhuyenMai {
               AND km.ngayKetThuc >= ?
             """;
 
-        List<CT_KhuyenMai> list = new ArrayList<>();
+        List<ChiTietKhuyenMai> list = new ArrayList<>();
         LocalDate today = LocalDate.now();
         Connection con = ConnectDB.getInstance().getCon(); 
         if (con == null) return list;
@@ -219,7 +219,7 @@ public class DAO_CT_KhuyenMai {
                     SanPham sp = daoSanPham.findById(maSp); 
                     LoaiKM loaiKM = LoaiKM.valueOf(rs.getString("loaiKM"));
 
-                    CT_KhuyenMai ctkm = new CT_KhuyenMai(km, sp, rs.getDouble("tiLe"), loaiKM);
+                    ChiTietKhuyenMai ctkm = new ChiTietKhuyenMai(km, sp, rs.getDouble("tiLe"), loaiKM);
                     list.add(ctkm);
                 }
             }
@@ -229,8 +229,8 @@ public class DAO_CT_KhuyenMai {
         return list; 
     }
 
-    public CT_KhuyenMai findBestForProduct(String maSP) {
-        List<CT_KhuyenMai> list = findBySanPham(maSP);
+    public ChiTietKhuyenMai findBestForProduct(String maSP) {
+        List<ChiTietKhuyenMai> list = findBySanPham(maSP);
         if (list.isEmpty()) return null;
 
         return list.stream()

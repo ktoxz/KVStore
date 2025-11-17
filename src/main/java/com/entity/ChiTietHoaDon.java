@@ -1,20 +1,20 @@
 package com.entity;
 
-public class CT_HoaDon {
+public class ChiTietHoaDon {
     private HoaDon hoaDon;
     private SanPham sanPham;
     private int soLuong;
     private KhuyenMai khuyenMai; // nullable
     private double thanhTien;    // đã gồm giảm giá
 
-    public CT_HoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong) {
+    public ChiTietHoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong) {
         this.hoaDon = hoaDon;
         this.sanPham = sanPham;
         this.soLuong = soLuong;
         this.thanhTien = sanPham.getGiaSP() * soLuong; // giá gốc
     }
 
-    public CT_HoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong, KhuyenMai km, double thanhTien) {
+    public ChiTietHoaDon(HoaDon hoaDon, SanPham sanPham, int soLuong, KhuyenMai km, double thanhTien) {
         this.hoaDon = hoaDon;
         this.sanPham = sanPham;
         this.soLuong = soLuong;

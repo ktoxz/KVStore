@@ -16,7 +16,11 @@ import javax.swing.text.BadLocationException; // added
 import javax.swing.text.DocumentFilter; // added
 import java.awt.*;
 import java.awt.event.*;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.List;
@@ -50,7 +54,7 @@ public class TAB_BanHang extends JPanel {
     private DAO_KhachHang daoKH = new DAO_KhachHang();
     private DAO_HoaDon daoHD = new DAO_HoaDon();
     private DAO_NhanVien daoStaff = new DAO_NhanVien();
-    private DAO_CT_KhuyenMai daoCTKM = new DAO_CT_KhuyenMai(); // added
+    private DAO_ChiTietKhuyenMai daoCTKM = new DAO_ChiTietKhuyenMai(); // added
     private JPopupMenu popupSearch; // Di chuyển ra ngoài để tái sử dụng
     
     // Customer info fields
@@ -746,8 +750,7 @@ public class TAB_BanHang extends JPanel {
                 return;
             }
             if (rbBank.isSelected()) {
-                double soTien = getTongCong() - tienGiamTuDiem;
-                showVietQRDialog(soTien);
+                showVietQRDialog(getTongCong() - tienGiamTuDiem);
             }
 
 
@@ -802,7 +805,7 @@ public class TAB_BanHang extends JPanel {
                         // Lấy giá sau KM để lưu vào hóa đơn
                         double giaSP = getDonGiaSauKhuyenMai(sp);
 
-                        CT_HoaDon chiTiet = new CT_HoaDon(hoaDon, sp, soLuong);
+                        ChiTietHoaDon chiTiet = new ChiTietHoaDon(hoaDon, sp, soLuong);
                         hoaDon.addChiTiet(chiTiet);
                     }
 
@@ -1012,7 +1015,7 @@ public class TAB_BanHang extends JPanel {
         lblVAT.setText(df.format(vat));
 
         // Tính tổng cộng
-        double tongCong = tongTien + vat;
+        double tongCong = tongTien + vat - tienGiamTuDiem;
         lblTongCongValue.setText(df.format(tongCong));
 
         // Tiền khách cần trả sau khi trừ điểm (vẫn tính nhưng không hiển thị dòng UI)
@@ -1307,7 +1310,7 @@ public class TAB_BanHang extends JPanel {
         if (sp == null) return 0;
         double giaGoc = sp.getGiaSP();
         try {
-            CT_KhuyenMai km = daoCTKM.findBestForProduct(sp.getMaSP());
+            ChiTietKhuyenMai km = daoCTKM.findBestForProduct(sp.getMaSP());
             if (km != null && km.getLoaiKM() != null) {
                 if (km.getLoaiKM() == LoaiKM.GiamGiaPhanTramSP) {
                     giaGoc = giaGoc * (100.0 - km.getGiaTri()) / 100.0;
@@ -1510,12 +1513,30 @@ public class TAB_BanHang extends JPanel {
             String qrURL = "https://img.vietqr.io/image/bidv-" + stk +
                     "-compact2.png?amount=" + (long) amount + "&addInfo=" + info;
 
-            // Load ảnh QR từ URL
-            java.net.URL url = new java.net.URL(qrURL);
-            ImageIcon icon = new ImageIcon(url);
-            int w = 540;
-            int h = 640;
-            Image img = icon.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+            // ===== Load ảnh an toàn =====
+            URL url = new URL(qrURL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+
+            byte[] imageBytes;
+            try (InputStream in = conn.getInputStream();
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+                byte[] buffer = new byte[4096];
+                int n;
+                while ((n = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, n);
+                }
+                imageBytes = out.toByteArray();
+            }
+
+            // Tạo icon từ byte[]
+            ImageIcon icon = new ImageIcon(imageBytes);
+
+            // Scale
+            Image img = icon.getImage().getScaledInstance(540, 640, Image.SCALE_SMOOTH);
             ImageIcon scaled = new ImageIcon(img);
 
             JLabel lblQR = new JLabel(scaled);
@@ -1538,11 +1559,14 @@ public class TAB_BanHang extends JPanel {
             note.setHorizontalAlignment(SwingConstants.CENTER);
             note.setFont(new Font("Segoe UI", Font.PLAIN, 15));
             dialog.add(note, BorderLayout.SOUTH);
+
+            dialog.setSize(500, 800);
             dialog.setResizable(false);
             dialog.setLocationRelativeTo(this);
             dialog.setVisible(true);
 
         } catch (Exception ex) {
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Không thể tạo mã VietQR!\n" + ex.getMessage(),
                     "Lỗi", JOptionPane.ERROR_MESSAGE);
