@@ -379,7 +379,7 @@ public class DAO_ThongKe {
         Connection con = ConnectDB.getCon();
         try {
             String sql = """
-                SELECT SUM(ct.soLuong * sp.giaSP * (1 + hd.thue/100.0))
+                SELECT SUM(ct.soLuong * sp.giaSP + hd.thue)
                 FROM CT_HoaDon ct
                 JOIN HoaDon hd ON ct.maHoaDon = hd.maHoaDon
                 JOIN SanPham sp ON ct.maSP = sp.maSP
